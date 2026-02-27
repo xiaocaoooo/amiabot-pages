@@ -1,0 +1,122 @@
+{{ define "bilibili/video" }}
+{{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+{{ if .Error }}
+<div class="container error-container">
+    <div class="label">错误</div>
+    <div class="value">{{ .Error }}</div>
+</div>
+{{ else }}
+{{ if .Cover }}
+<div class="container" style="padding: 0; overflow: hidden; border: 1px solid var(--color-outline-variant);">
+    <img src="{{ .Cover }}" alt="{{ .Title }}" style="display:block; width:100%; height:auto;">
+</div>
+{{ end }}
+
+<div class="container primary-container">
+    <div class="label">标题</div>
+    <div class="value" style="word-break: break-word;">{{ .Title }}</div>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">BV号</div>
+        <div class="value">{{ .BVID }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">AV号</div>
+        <div class="value">{{ .AID }}</div>
+    </div>
+</div>
+
+<div class="container"
+    style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant); margin-top: 8px;">
+    <div class="label">UP主</div>
+    <div style="display:flex; align-items:center; gap:10px;">
+        {{ if .UpperFace }}
+        <img src="{{ .UpperFace }}" alt="{{ .UpperName }}"
+            style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid var(--color-outline-variant);">
+        {{ end }}
+        <div class="value">{{ .UpperName }}</div>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px;">
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">播放</div>
+        <div class="value">{{ .Play }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">点赞</div>
+        <div class="value">{{ .Like }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">硬币</div>
+        <div class="value">{{ .Coin }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">收藏</div>
+        <div class="value">{{ .Favorite }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">弹幕</div>
+        <div class="value">{{ .Danmaku }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">评论</div>
+        <div class="value">{{ .Reply }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">分享</div>
+        <div class="value">{{ .Share }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">时长</div>
+        <div class="value">{{ .Duration }}</div>
+    </div>
+</div>
+
+{{ if .PublishTime }}
+<div class="container"
+    style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant);">
+    <div class="label">时间信息</div>
+    <div style="font-size: 14px; color: var(--color-on-surface-variant); line-height: 1.8;">
+        <div>发布时间：{{ .PublishTime }}</div>
+        {{ if and .ShowUploadTime .UploadTime }}
+        <div>上传时间：{{ .UploadTime }}</div>
+        {{ end }}
+    </div>
+</div>
+{{ end }}
+
+{{ if .Intro }}
+<div class="container"
+    style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant);">
+    <div class="label">简介</div>
+    <div
+        style="font-size: 14px; white-space: pre-wrap; color: var(--color-on-surface-variant); max-height: 180px; overflow: hidden;">
+        {{ .Intro }}</div>
+</div>
+{{ end }}
+
+{{ if .Pages }}
+<div class="container"
+    style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant);">
+    <div class="label">分P列表（展示前 {{ len .Pages }} / {{ .TotalPages }}）</div>
+    {{ range .Pages }}
+    <div
+        style="display:flex; justify-content: space-between; align-items:center; border-bottom: 1px solid var(--color-outline-variant); padding: 6px 0; font-size: 14px;">
+        <span style="padding-right: 8px;">P{{ .Index }}. {{ .Title }}</span>
+        <span style="opacity: .75; font-family: monospace;">{{ .DurationStr }}</span>
+    </div>
+    {{ end }}
+    {{ if .HasMorePages }}
+    <div style="margin-top: 8px; font-size: 12px; color: var(--color-on-surface-variant);">还有 {{ .RemainingPageCount }}
+        个分P未展示...</div>
+    {{ end }}
+</div>
+{{ end }}
+{{ end }}
+{{ end }}
