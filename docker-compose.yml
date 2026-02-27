@@ -1,0 +1,12 @@
+services:
+  amiabot-pages:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: xiaocaoooo/amiabot-pages:local
+    container_name: amiabot-pages
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+    restart: unless-stopped

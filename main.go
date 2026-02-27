@@ -1,12 +1,19 @@
 package main
 
 import (
+	"net/http"
+	"os"
+
 	"github.com/gin-gonic/gin"
-	"github.com/xiaocaoooo/amiabot-pages/handlers/bilibili" // 替换为你的 go mod 名字
+	"github.com/xiaocaoooo/amiabot-pages/handlers/bilibili"
 )
 
 func main() {
 	r := gin.Default()
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
 	r.LoadHTMLFiles(
 		"templates/layout.html",
 		"templates/logo.html",
@@ -17,5 +24,10 @@ func main() {
 		bilibiliGroup.GET("/video", bilibili.VideoHandler)
 	}
 
-	r.Run(":8080")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	r.Run(":" + port)
 }
