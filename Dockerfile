@@ -16,6 +16,8 @@ RUN apk add --no-cache ca-certificates wget && adduser -D -u 10001 appuser
 
 COPY --from=builder /out/amiabot-pages /app/amiabot-pages
 
+COPY --from=builder /app/templates /app/templates
+
 ENV PORT=8080
 EXPOSE 8080
 
