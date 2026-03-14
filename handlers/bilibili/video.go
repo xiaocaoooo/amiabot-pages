@@ -1,17 +1,15 @@
 package bilibili
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	htmltemplate "html/template"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/xiaocaoooo/amiabot-pages/pkg/imgcache"
 )
 
 type bilibiliViewResp struct {
@@ -113,42 +111,6 @@ func formatUnixTime(ts int64) string {
 	return time.Unix(ts, 0).Local().Format("2006-01-02 15:04:05")
 }
 
-func downloadImageAsDataURL(imageURL string) htmltemplate.URL {
-	if imageURL == "" {
-		return htmltemplate.URL("")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, imageURL, nil)
-	if err != nil {
-		return htmltemplate.URL("")
-	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36")
-	req.Header.Set("Referer", "https://www.bilibili.com/")
-
-	client := &http.Client{Timeout: 8 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return htmltemplate.URL("")
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return htmltemplate.URL("")
-	}
-
-	data, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
-	if err != nil || len(data) == 0 {
-		return htmltemplate.URL("")
-	}
-
-	contentType := resp.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = http.DetectContentType(data)
-	}
-
-	return htmltemplate.URL("data:" + contentType + ";base64," + base64.StdEncoding.EncodeToString(data))
-}
-
 func VideoHandler(c *gin.Context) {
 	bv := c.Query("bv")
 	if bv == "" {
@@ -219,8 +181,9 @@ func VideoHandler(c *gin.Context) {
 		})
 	}
 
-	coverDataURL := downloadImageAsDataURL(apiResp.Data.Pic)
-	upperFaceDataURL := downloadImageAsDataURL(apiResp.Data.Owner.Face)
+	biliHeaders := map[string]string{"Referer": "https://www.bilibili.com/"}
+	coverDataURL := imgcache.Default.Download(apiResp.Data.Pic, -1, biliHeaders)
+	upperFaceDataURL := imgcache.Default.Download(apiResp.Data.Owner.Face, -1, biliHeaders)
 	publishTime := formatUnixTime(apiResp.Data.Pubdate)
 	uploadTime := formatUnixTime(apiResp.Data.Ctime)
 	showUploadTime := false

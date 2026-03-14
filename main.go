@@ -3,9 +3,12 @@ package main
 import (
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/xiaocaoooo/amiabot-pages/handlers/bilibili"
+	"github.com/xiaocaoooo/amiabot-pages/handlers/pjsk"
+	"github.com/xiaocaoooo/amiabot-pages/pkg/imgcache"
 )
 
 func main() {
@@ -18,11 +21,24 @@ func main() {
 		"templates/layout.html",
 		"templates/logo.html",
 		"templates/bilibili/video.html",
+		"templates/pjsk/event.html",
 	)
 	bilibiliGroup := r.Group("/bilibili")
 	{
 		bilibiliGroup.GET("/video", bilibili.VideoHandler)
 	}
+
+	pjskGroup := r.Group("/pjsk")
+	{
+		pjskGroup.GET("/event", pjsk.EventHandler)
+		pjskGroup.GET("/event/current", pjsk.CurrentEventHandler)
+		pjskGroup.GET("/assets/*path", pjsk.AssetHandler)
+	}
+
+	pjsk.InitAssets()
+
+	imgcache.Default.LoadIndex()
+	imgcache.Default.StartCleanupTicker(10 * time.Minute)
 
 	port := os.Getenv("PORT")
 	if port == "" {
