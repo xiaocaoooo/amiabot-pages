@@ -282,3 +282,15 @@ func downloadCardImage(server, assetbundleName, status string) htmltemplate.URL 
 		"character/member/" + assetbundleName + "/" + file + ".webp",
 	})
 }
+
+func downloadMusicJacket(server, assetbundleName string) htmltemplate.URL {
+	if assetbundleName == "" {
+		return htmltemplate.URL("")
+	}
+	return downloadAssetWithFallback(server, "music jacket:"+assetbundleName, []string{
+		"startapp/music/jacket/" + assetbundleName + "/" + assetbundleName + ".png",
+		"startapp/music/jacket/" + assetbundleName + "/" + assetbundleName + ".webp",
+		"music/jacket/" + assetbundleName + "/" + assetbundleName + ".png",
+		"music/jacket/" + assetbundleName + "/" + assetbundleName + ".webp",
+	})
+}

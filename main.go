@@ -23,6 +23,7 @@ func main() {
 		"templates/bilibili/video.html",
 		"templates/pjsk/event.html",
 		"templates/pjsk/card.html",
+		"templates/pjsk/music.html",
 	)
 	bilibiliGroup := r.Group("/bilibili")
 	{
@@ -34,6 +35,7 @@ func main() {
 		pjskGroup.GET("/event", pjsk.EventHandler)
 		pjskGroup.GET("/event/current", pjsk.CurrentEventHandler)
 		pjskGroup.GET("/card", pjsk.CardHandler)
+		pjskGroup.GET("/music", pjsk.MusicHandler)
 		pjskGroup.GET("/assets/*path", pjsk.AssetHandler)
 	}
 
