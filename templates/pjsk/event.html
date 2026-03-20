@@ -1,8 +1,10 @@
 {{ define "pjsk/event" }}
-{{ template "layout" . }}
+{{ template "layout/start" . }}
+{{ template "pjsk/event/content" . }}
+{{ template "layout/end" . }}
 {{ end }}
 
-{{ define "content" }}
+{{ define "pjsk/event/content" }}
 {{ if .Error }}
 <div class="container error-container">
     <div class="label">错误</div>

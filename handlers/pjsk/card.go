@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/xiaocaoooo/amiabot-pages/pkg/imgcache"
 )
 
 // pjskGameCharacter 角色基本信息
@@ -99,14 +98,6 @@ func findCardFull(server string, cardID int) (*pjskCardFull, error) {
 	return nil, fmt.Errorf("未找到卡面 ID: %d (服务器: %s)", cardID, server)
 }
 
-func cardThumbURL(server, assetbundleName, suffix string) string {
-	return "https://storage.sekai.best/sekai-" + server + "-assets/thumbnail/chara/" + assetbundleName + "_" + suffix + ".webp"
-}
-
-func cardImageURL(server, assetbundleName, suffix string) string {
-	return "https://storage.sekai.best/sekai-" + server + "-assets/character/member/" + assetbundleName + "/" + suffix + ".webp"
-}
-
 func hasSpecialTraining(rarity string) bool {
 	return rarity == "rarity_3" || rarity == "rarity_4" || rarity == "rarity_birthday"
 }
@@ -148,10 +139,10 @@ func CardHandler(c *gin.Context) {
 	}
 
 	// 缩略图
-	thumb := imgcache.Default.Download(cardThumbURL(server, card.AssetbundleName, "normal"), -1, nil)
+	thumb := downloadCardThumbnail(server, card.AssetbundleName, "normal")
 
 	// 大图
-	cardImage := imgcache.Default.Download(cardImageURL(server, card.AssetbundleName, "card_normal"), -1, nil)
+	cardImage := downloadCardImage(server, card.AssetbundleName, "normal")
 
 	rarity := card.CardRarityType
 	sIcon := starDataURL
@@ -193,8 +184,8 @@ func CardHandler(c *gin.Context) {
 
 	if hasSpecialTraining(rarity) {
 		d.HasAfter = true
-		d.ThumbnailAfter = imgcache.Default.Download(cardThumbURL(server, card.AssetbundleName, "after_training"), -1, nil)
-		d.CardImageAfter = imgcache.Default.Download(cardImageURL(server, card.AssetbundleName, "card_after_training"), -1, nil)
+		d.ThumbnailAfter = downloadCardThumbnail(server, card.AssetbundleName, "after_training")
+		d.CardImageAfter = downloadCardImage(server, card.AssetbundleName, "after_training")
 		d.FrameAfter = frameDataURLs[rarity]
 		d.StarsAfter = starPositions(rarity)
 		d.StarIconAfter = sIcon

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/xiaocaoooo/amiabot-pages/pkg/imgcache"
 )
 
 var validServers = map[string]bool{
@@ -42,10 +41,6 @@ type pjskCard struct {
 	Attr            string `json:"attr"`
 	Prefix          string `json:"prefix"`
 	AssetbundleName string `json:"assetbundleName"`
-}
-
-type currentEventResp struct {
-	EventID int `json:"eventId"`
 }
 
 // cardDisplay 传给模板的卡面展示数据
@@ -174,6 +169,61 @@ func findEvent(server string, eventID int) (*pjskEvent, error) {
 	return nil, fmt.Errorf("未找到活动 ID: %d (服务器: %s)", eventID, server)
 }
 
+func latestEventByTime(server string) (*pjskEvent, error) {
+	data, err := ReadCachedJSON(server, "events.json")
+	if err != nil {
+		return nil, err
+	}
+
+	var events []pjskEvent
+	if err := json.Unmarshal(data, &events); err != nil {
+		return nil, fmt.Errorf("解析活动数据失败: %w", err)
+	}
+	if len(events) == 0 {
+		return nil, fmt.Errorf("活动数据为空 (服务器: %s)", server)
+	}
+
+	latest := &events[0]
+	for i := 1; i < len(events); i++ {
+		if isNewerEvent(events[i], *latest) {
+			latest = &events[i]
+		}
+	}
+
+	if latest.ID <= 0 {
+		return nil, fmt.Errorf("未找到有效活动 ID (服务器: %s)", server)
+	}
+	return latest, nil
+}
+
+func isNewerEvent(a, b pjskEvent) bool {
+	aTime := latestEventTime(a)
+	bTime := latestEventTime(b)
+	if aTime != bTime {
+		return aTime > bTime
+	}
+	if a.StartAt != b.StartAt {
+		return a.StartAt > b.StartAt
+	}
+	if a.AggregateAt != b.AggregateAt {
+		return a.AggregateAt > b.AggregateAt
+	}
+	if a.ClosedAt != b.ClosedAt {
+		return a.ClosedAt > b.ClosedAt
+	}
+	return a.ID > b.ID
+}
+
+func latestEventTime(e pjskEvent) int64 {
+	if e.StartAt > 0 {
+		return e.StartAt
+	}
+	if e.AggregateAt > 0 {
+		return e.AggregateAt
+	}
+	return e.ClosedAt
+}
+
 // findEventCards 查找活动关联的卡面信息
 func findEventCards(server string, eventID int) []cardDisplay {
 	ecData, err := ReadCachedJSON(server, "eventCards.json")
@@ -217,8 +267,7 @@ func findEventCards(server string, eventID int) []cardDisplay {
 		if !ok {
 			continue
 		}
-		thumbURL := "https://storage.sekai.best/sekai-jp-assets/thumbnail/chara/" + card.AssetbundleName + "_normal.webp"
-		thumb := imgcache.Default.Download(thumbURL, -1, nil)
+		thumb := downloadCardThumbnail(server, card.AssetbundleName, "normal")
 
 		rarity := card.CardRarityType
 		if name, ok := rarityNames[rarity]; ok {
@@ -250,18 +299,6 @@ func findEventCards(server string, eventID int) []cardDisplay {
 		})
 	}
 	return result
-}
-
-func getAssetURL(server, assetbundleName string) string {
-	return "https://storage.sekai.best/sekai-" + server + "-assets/event/" + assetbundleName + "/screen/bg.png"
-}
-
-func getLogoURL(server, assetbundleName string) string {
-	return "https://storage.sekai.best/sekai-" + server + "-assets/event/" + assetbundleName + "/logo/logo.webp"
-}
-
-func getBannerURL(server, assetbundleName string) string {
-	return "https://storage.sekai.best/sekai-" + server + "-assets/home/banner/" + assetbundleName + "/" + assetbundleName + ".webp"
 }
 
 func formatMillisTime(ms int64) string {
@@ -342,14 +379,9 @@ func EventHandler(c *gin.Context) {
 	}
 
 	// 下载背景图、徽标、横幅
-	bgURL := getAssetURL(server, target.AssetbundleName)
-	bgDataURL := imgcache.Default.Download(bgURL, -1, nil)
-
-	logoURL := getLogoURL(server, target.AssetbundleName)
-	logoDataURL := imgcache.Default.Download(logoURL, -1, nil)
-
-	bannerURL := getBannerURL(server, target.AssetbundleName)
-	bannerDataURL := imgcache.Default.Download(bannerURL, -1, nil)
+	bgDataURL := downloadEventBackground(server, target.AssetbundleName)
+	logoDataURL := downloadEventLogo(server, target.AssetbundleName)
+	bannerDataURL := downloadEventBanner(server, target.AssetbundleName)
 
 	// 查找活动关联卡面
 	cards := findEventCards(server, eventID)
@@ -380,42 +412,12 @@ func CurrentEventHandler(c *gin.Context) {
 		return
 	}
 
-	apiURL := "https://strapi.sekai.best/sekai-current-event"
-	if server != "jp" {
-		apiURL += "-" + server
-	}
-
-	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
+	latest, err := latestEventByTime(server)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建请求失败: " + err.Error()})
-		return
-	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "请求当前活动数据失败: " + err.Error()})
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("当前活动接口返回异常状态码: %d", resp.StatusCode)})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取最新活动失败: " + err.Error()})
 		return
 	}
 
-	var current currentEventResp
-	if err := json.NewDecoder(resp.Body).Decode(&current); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "解析当前活动数据失败: " + err.Error()})
-		return
-	}
-
-	if current.EventID <= 0 {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "未获取到当前活动 ID"})
-		return
-	}
-
-	redirectURL := fmt.Sprintf("/pjsk/event?id=%d&server=%s", current.EventID, server)
+	redirectURL := fmt.Sprintf("/pjsk/event?id=%d&server=%s", latest.ID, server)
 	c.Redirect(http.StatusFound, redirectURL)
 }

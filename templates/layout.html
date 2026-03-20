@@ -1,4 +1,4 @@
-{{ define "layout" }}
+{{ define "layout/start" }}
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -158,7 +158,6 @@
             word-break: break-all;
         }
     </style>
-    {{ block "header" . }}{{ end }}
 </head>
 
 <body>
@@ -169,7 +168,9 @@
             </div>
 
             <div id="content">
-                {{ block "content" . }}{{ end }}
+{{ end }}
+
+{{ define "layout/end" }}
             </div>
 
             <div id="footer">
@@ -188,7 +189,6 @@
             if (el) el.textContent = formatted;
         })();
     </script>
-    {{ block "script" . }}{{ end }}
 </body>
 
 </html>

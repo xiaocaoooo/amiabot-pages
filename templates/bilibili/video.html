@@ -1,8 +1,10 @@
 {{ define "bilibili/video" }}
-{{ template "layout" . }}
+{{ template "layout/start" . }}
+{{ template "bilibili/video/content" . }}
+{{ template "layout/end" . }}
 {{ end }}
 
-{{ define "content" }}
+{{ define "bilibili/video/content" }}
 {{ if .Error }}
 <div class="container error-container">
     <div class="label">错误</div>
