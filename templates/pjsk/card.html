@@ -1,0 +1,116 @@
+{{ define "pjsk/card" }}
+{{ template "layout" . }}
+{{ end }}
+
+{{ define "content" }}
+{{ if .Error }}
+<div class="container error-container">
+    <div class="label">错误</div>
+    <div class="value">{{ .Error }}</div>
+</div>
+{{ else }}
+{{ $c := .Card }}
+
+{{ if $c.CardImage }}
+<div class="container" style="padding: 0; overflow: hidden; border: 1px solid var(--color-outline-variant);">
+    <img src="{{ $c.CardImage }}" style="display:block; width:100%; height:auto;">
+</div>
+{{ end }}
+
+{{ if $c.CardImageAfter }}
+<div class="container" style="padding: 0; overflow: hidden; border: 1px solid var(--color-outline-variant);">
+    <img src="{{ $c.CardImageAfter }}" style="display:block; width:100%; height:auto;">
+</div>
+{{ end }}
+
+<div class="container primary-container">
+    <div class="label">卡面名称</div>
+    <div class="value" style="word-break: break-word;">{{ $c.Prefix }}</div>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">卡面 ID</div>
+        <div class="value">{{ $c.ID }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">服务器</div>
+        <div class="value">{{ $c.Server }}</div>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">角色</div>
+        <div class="value">{{ $c.CharacterName }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">所属团体</div>
+        <div class="value">{{ $c.CharacterUnit }}</div>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">稀有度</div>
+        <div class="value">{{ $c.Rarity }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">属性</div>
+        <div class="value">{{ $c.Attr }}</div>
+    </div>
+</div>
+
+{{ if $c.SkillName }}
+<div class="container secondary-container" style="margin-top: 8px;">
+    <div class="label">技能名称</div>
+    <div class="value">{{ $c.SkillName }}</div>
+</div>
+{{ end }}
+
+{{ if $c.FlavorText }}
+<div class="container" style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant); margin-top: 8px;">
+    <div class="label">描述</div>
+    <div style="font-size: 14px; color: var(--color-on-surface-variant); line-height: 1.6;">{{ $c.FlavorText }}</div>
+</div>
+{{ end }}
+
+{{ if $c.ReleaseAt }}
+<div class="container secondary-container" style="margin-top: 8px;">
+    <div class="label">发布时间</div>
+    <div class="value">{{ $c.ReleaseAt }}</div>
+</div>
+{{ end }}
+
+<div class="container" style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant); margin-top: 8px;">
+    <div class="label">卡面预览</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-top: 8px; justify-content: center;">
+        {{ if $c.Thumbnail }}
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 156 156" style="width: 120px; height: 120px;">
+                <image href="{{ $c.Thumbnail }}" x="8" y="8" height="140" width="140"></image>
+                {{ if $c.Frame }}<image href="{{ $c.Frame }}" x="0" y="0" height="156" width="156"></image>{{ end }}
+                {{ if $c.AttrIcon }}<image href="{{ $c.AttrIcon }}" x="1" y="1" width="35" height="35"></image>{{ end }}
+                {{ range $c.Stars }}<image href="{{ $c.StarIcon }}" x="{{ . }}" y="118" width="28" height="28"></image>{{ end }}
+            </svg>
+            <div style="margin-top: 4px; font-size: 12px; color: var(--color-on-surface-variant);">特训前</div>
+        </div>
+        {{ end }}
+        {{ if $c.HasAfter }}
+        {{ if $c.ThumbnailAfter }}
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 156 156" style="width: 120px; height: 120px;">
+                <image href="{{ $c.ThumbnailAfter }}" x="8" y="8" height="140" width="140"></image>
+                {{ if $c.FrameAfter }}<image href="{{ $c.FrameAfter }}" x="0" y="0" height="156" width="156"></image>{{ end }}
+                {{ if $c.AttrIcon }}<image href="{{ $c.AttrIcon }}" x="1" y="1" width="35" height="35"></image>{{ end }}
+                {{ range $c.StarsAfter }}<image href="{{ $c.StarIconAfter }}" x="{{ . }}" y="118" width="28" height="28"></image>{{ end }}
+            </svg>
+            <div style="margin-top: 4px; font-size: 12px; color: var(--color-on-surface-variant);">特训后</div>
+        </div>
+        {{ end }}
+        {{ end }}
+    </div>
+</div>
+
+{{ end }}
+{{ end }}
