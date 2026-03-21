@@ -13,6 +13,7 @@
 - 启动后自动后台拉取 PJSK 多服务器 JSON 资源并缓存到本地
 - PJSK 图片资源支持 `snowy/uni/haruki` 多源回退与失败重试
 - 图片下载后转为 `data URL` 并缓存，减少重复外链请求
+- 支持通过 `param_id` 从 Valkey 注入预存 query 参数，解决 URL 过长问题
 - 提供健康检查接口，方便容器编排与监控
 
 ## 技术栈
@@ -33,6 +34,7 @@
 │       ├── event.go           # 活动页面 / 当前活动跳转
 │       └── card.go            # 卡面页面
 ├── templates/                 # HTML 模板
+├── pkg/paramid/               # param_id -> Valkey 参数注入中间件
 ├── static/pjsk/card/          # 卡框、属性图标、星星素材
 └── cache/
     ├── pjsk/                  # PJSK JSON 缓存
@@ -67,6 +69,80 @@ docker compose up -d --build
 | `ZEABUR_TOKEN` | 空 | 可选。用于 `/status/zeabur` 页面查询 Zeabur GraphQL 状态（也可在请求头 `Authorization: Bearer <token>` 传入） |
 | `IMAGE_CACHE_MAX_SIZE` | `512` | 图片缓存上限（单位 MB） |
 | `SEKAI_ASSET` | `snowy,uni,haruki` | PJSK 图片资源源优先级。支持 `snowy` / `uni` / `haruki`，可用逗号配置多个，按顺序回退重试 |
+| `VALKEY_ADDR` | 空 | Valkey 地址（示例：`127.0.0.1:6379`）。为空时不启用 `param_id` 注入功能 |
+| `VALKEY_PASSWORD` | 空 | 可选。Valkey 密码 |
+| `VALKEY_DB` | `0` | 可选。Valkey DB 编号 |
+| `VALKEY_KEY_TEMPLATE` | `amiabot-pages:params:{id}` | 可选。`param_id` 到 key 的模板，必须包含 `{id}` |
+
+## `param_id` 注入用法（通用）
+
+当目标端点只能使用 URL 参数、但参数过长时，可通过 `param_id` 先在外部系统存储参数，再由本服务读取注入。
+
+适用范围：
+
+- `GET /status/*`
+- `GET /bilibili/*`
+- `GET /pjsk/*`
+- `GET /health` 不受影响
+
+流程：
+
+1. 外部系统将大参数写入 Valkey（建议设置 TTL），并得到参数 ID（如 `abc123`）
+2. 调用目标端点时只传 `param_id=abc123`
+3. 服务读取 key 并将参数合并到请求 query 后继续执行原 handler
+
+key 生成规则：
+
+- 默认模板：`amiabot-pages:params:{id}`
+- 示例：`param_id=abc123` 对应 key 为 `amiabot-pages:params:abc123`
+- 可通过 `VALKEY_KEY_TEMPLATE` 覆盖模板
+
+Valkey value 格式（JSON 对象）：
+
+```json
+{
+  "server": "jp",
+  "id": "1001",
+  "tag": ["a", "b"],
+  "retry": 3,
+  "preview": true
+}
+```
+
+规则：
+
+- 支持标量值：`string / number / bool`
+- 支持数组值，转为重复 query 参数（如 `tag=a&tag=b`）
+- 不支持嵌套对象，遇到将返回 `400`
+- URL 显式参数优先于 Valkey 参数（可用于临时覆盖调试）
+- `param_id` 在注入后会被移除，不传递给业务 handler
+
+示例：
+
+```text
+/pjsk/card?param_id=abc123
+/pjsk/card?param_id=abc123&id=2002   # URL 中 id 会覆盖 Valkey 中 id
+/bilibili/video?param_id=video_job_9
+```
+
+错误语义：
+
+- `400 Bad Request`
+  - `param_id` 为空
+  - `param_id` 未命中 / 已过期
+  - Valkey value 不是合法 JSON 对象或包含不支持类型
+- `502 Bad Gateway`
+  - Valkey 不可用或读取失败
+
+错误响应示例：
+
+```json
+{"error":"param_id 无效或已过期"}
+```
+
+```json
+{"error":"Valkey 不可用: dial tcp 127.0.0.1:6379: connect: connection refused"}
+```
 
 ## 接口说明
 

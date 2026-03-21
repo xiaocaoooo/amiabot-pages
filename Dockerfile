@@ -18,6 +18,8 @@ COPY --from=builder /out/amiabot-pages /app/amiabot-pages
 
 COPY --from=builder /app/templates /app/templates
 
+RUN mkdir -p /app/cache && chown appuser:appuser /app/cache
+
 ENV PORT=8080
 EXPOSE 8080
 

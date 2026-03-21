@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -10,14 +11,25 @@ import (
 	"github.com/xiaocaoooo/amiabot-pages/handlers/pjsk"
 	"github.com/xiaocaoooo/amiabot-pages/handlers/status"
 	"github.com/xiaocaoooo/amiabot-pages/pkg/imgcache"
+	"github.com/xiaocaoooo/amiabot-pages/pkg/paramid"
 )
 
 func main() {
 	r := gin.Default()
+	paramIDHandler, paramIDEnabled, err := paramid.NewFromEnv()
+	if err != nil {
+		log.Fatalf("初始化 param_id 中间件失败: %v", err)
+	}
+	groupMiddlewares := make([]gin.HandlerFunc, 0, 1)
+	if paramIDEnabled {
+		log.Printf("[paramid] 已启用 param_id 参数注入中间件")
+		groupMiddlewares = append(groupMiddlewares, paramIDHandler)
+	}
+
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
-	statusGroup := r.Group("/status")
+	statusGroup := r.Group("/status", groupMiddlewares...)
 	{
 		statusGroup.GET("/zeabur", status.ZeaburPageHandler)
 	}
@@ -31,12 +43,12 @@ func main() {
 		"templates/pjsk/music.html",
 		"templates/status/zeabur.html",
 	)
-	bilibiliGroup := r.Group("/bilibili")
+	bilibiliGroup := r.Group("/bilibili", groupMiddlewares...)
 	{
 		bilibiliGroup.GET("/video", bilibili.VideoHandler)
 	}
 
-	pjskGroup := r.Group("/pjsk")
+	pjskGroup := r.Group("/pjsk", groupMiddlewares...)
 	{
 		pjskGroup.GET("/event", pjsk.EventHandler)
 		pjskGroup.GET("/event/current", pjsk.CurrentEventHandler)

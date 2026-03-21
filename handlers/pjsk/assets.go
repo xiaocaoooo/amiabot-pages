@@ -123,8 +123,13 @@ func loadSavedSHA(server string) string {
 func saveSHA(server, sha string) {
 	commitSHAs.Store(server, sha)
 	dir := serverCacheDir(server)
-	_ = os.MkdirAll(dir, 0o755)
-	_ = os.WriteFile(filepath.Join(dir, commitSHAFile), []byte(sha), 0o644)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		log.Printf("[pjsk] 创建缓存目录 %s 失败: %v", dir, err)
+		return
+	}
+	if err := os.WriteFile(filepath.Join(dir, commitSHAFile), []byte(sha), 0o644); err != nil {
+		log.Printf("[pjsk] 保存 commit SHA 失败: %v", err)
+	}
 }
 
 // fetchFileList 通过 GitHub Contents API 获取仓库根目录所有 .json 文件名
@@ -187,7 +192,9 @@ func downloadFile(server, file string) error {
 	}
 
 	dir := serverCacheDir(server)
-	_ = os.MkdirAll(dir, 0o755)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("创建缓存目录 %s 失败: %w", dir, err)
+	}
 	return os.WriteFile(filepath.Join(dir, file), data, 0o644)
 }
 
@@ -305,7 +312,7 @@ func ReadCachedJSON(server, file string) ([]byte, error) {
 	return data, nil
 }
 
-// InitMasterData 启动时加载 commit SHA，后台全量刷新
+// InitMasterData 启动时加载 commit SHA，同步全量刷新后才允许服务就绪
 func InitMasterData() {
 	for _, s := range allServers {
 		if sha := loadSavedSHA(s); sha != "" {
@@ -313,25 +320,23 @@ func InitMasterData() {
 		}
 	}
 
-	log.Println("[pjsk] 后台启动全量下载...")
-	go func() {
-		results := RefreshAll(false)
-		total, failed := 0, 0
-		for server, serverResults := range results {
-			for key, status := range serverResults {
-				if strings.HasPrefix(key, "_") {
-					log.Printf("[pjsk] %s: %s = %s", server, key, status)
-					continue
-				}
-				total++
-				if status != "ok" {
-					failed++
-					log.Printf("[pjsk] 下载失败: %s 原因: %s", remoteURL(server, key), status)
-				}
+	log.Println("[pjsk] 开始全量下载 masterdata（等待完成后服务才会启动）...")
+	results := RefreshAll(false)
+	total, failed := 0, 0
+	for server, serverResults := range results {
+		for key, status := range serverResults {
+			if strings.HasPrefix(key, "_") {
+				log.Printf("[pjsk] %s: %s = %s", server, key, status)
+				continue
+			}
+			total++
+			if status != "ok" {
+				failed++
+				log.Printf("[pjsk] 下载失败: %s 原因: %s", remoteURL(server, key), status)
 			}
 		}
-		log.Printf("[pjsk] 全量下载完成: %d 个文件, %d 个失败", total, failed)
-	}()
+	}
+	log.Printf("[pjsk] masterdata 加载完成: %d 个文件, %d 个失败", total, failed)
 }
 
 // MasterDataHandler GET /pjsk/masterdata/*path
