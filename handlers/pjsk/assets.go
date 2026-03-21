@@ -258,6 +258,11 @@ func refreshServer(server string, maxConcurrency int, force bool) map[string]str
 				}
 				time.Sleep(time.Duration(attempt+1) * time.Second)
 			}
+			if dlErr != nil {
+				log.Printf("[pjsk] 下载失败 (%s): %s - %v", server, file, dlErr)
+			} else {
+				log.Printf("[pjsk] 下载成功 (%s): %s", server, file)
+			}
 			ch <- result{file: file, err: dlErr}
 		}(f)
 	}
