@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	htmltemplate "html/template"
 	"io"
 	"math"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/xiaocaoooo/amiabot-pages/pkg/imgcache"
 )
 
 const zeaburGraphQLEndpoint = "https://api.zeabur.com/graphql"
@@ -133,7 +135,7 @@ type zeaburServerView struct {
 
 type zeaburProjectView struct {
 	Name         string
-	IconURL      string
+	IconURL      htmltemplate.URL
 	ServiceCount int
 	RunningCount int
 	Services     []zeaburServiceView
@@ -231,7 +233,7 @@ func buildZeaburStatusPage(data zeaburStatusData) zeaburStatusPageData {
 	for _, edge := range data.Projects.Edges {
 		p := zeaburProjectView{
 			Name:         edge.Node.Name,
-			IconURL:      edge.Node.IconURL,
+			IconURL:      imgcache.Default.Download(edge.Node.IconURL, -1, nil),
 			ServiceCount: len(edge.Node.Services),
 		}
 
