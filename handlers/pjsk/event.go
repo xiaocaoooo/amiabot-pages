@@ -183,10 +183,27 @@ func latestEventByTime(server string) (*pjskEvent, error) {
 		return nil, fmt.Errorf("活动数据为空 (服务器: %s)", server)
 	}
 
+	now := time.Now().UnixMilli()
+
 	latest := &events[0]
 	for i := 1; i < len(events); i++ {
+		// 跳过尚未开始的活动
+		if events[i].StartAt > now {
+			continue
+		}
 		if isNewerEvent(events[i], *latest) {
 			latest = &events[i]
+		}
+	}
+
+	// 如果最早选中的 latest 也未开始，说明所有活动都未开始
+	// 此时 fallback 到原来逻辑（返回时间上最新的）
+	if latest.StartAt > now {
+		latest = &events[0]
+		for i := 1; i < len(events); i++ {
+			if isNewerEvent(events[i], *latest) {
+				latest = &events[i]
+			}
 		}
 	}
 
