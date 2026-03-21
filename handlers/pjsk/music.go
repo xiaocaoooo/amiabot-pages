@@ -24,11 +24,11 @@ type pjskMusic struct {
 
 // pjskMusicVocal 歌词信息
 type pjskMusicVocal struct {
-	ID           int    `json:"id"`
-	MusicID      int    `json:"musicId"`
-	VocalType    string `json:"vocalType"`
-	Caption      string `json:"caption"`
-	Arranger     string `json:"arranger"`
+	ID        int    `json:"id"`
+	MusicID   int    `json:"musicId"`
+	VocalType string `json:"vocalType"`
+	Caption   string `json:"caption"`
+	Arranger  string `json:"arranger"`
 }
 
 // pjskMusicDifficulty 难度信息
@@ -115,7 +115,7 @@ func MusicHandler(c *gin.Context) {
 	}
 
 	// 封面图
-	jacket := downloadMusicJacket(server, music.AssetbundleName)
+	jacket := downloadAssetByLabel(server, "music:jacket:"+music.AssetbundleName)
 
 	// 演唱版本
 	vocalists := findMusicVocals(server, musicID)

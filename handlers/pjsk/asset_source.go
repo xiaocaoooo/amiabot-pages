@@ -28,6 +28,57 @@ var (
 		sekaiAssetHaruki,
 	}
 
+	assetLabelPathTemplates = map[string][]string{
+		"event:background": {
+			"ondemand/event/{assetbundle}/screen/bg.png",
+			"ondemand/event/{assetbundle}/screen/bg.webp",
+			"event/{assetbundle}/screen/bg.png",
+			"event/{assetbundle}/screen/bg.webp",
+		},
+		"event:logo": {
+			"ondemand/event/{assetbundle}/logo/logo.png",
+			"ondemand/event/{assetbundle}/logo/logo.webp",
+			"event/{assetbundle}/logo/logo.png",
+			"event/{assetbundle}/logo/logo.webp",
+		},
+		"event:banner": {
+			"ondemand/event_story/{assetbundle}/screen_image/banner_event_story.png",
+			"ondemand/event_story/{assetbundle}/screen_image/banner_event_story.webp",
+			"event_story/{assetbundle}/screen_image/banner_event_story.png",
+			"event_story/{assetbundle}/screen_image/banner_event_story.webp",
+			"ondemand/event/{assetbundle}/logo/logo.png",
+			"ondemand/event/{assetbundle}/logo/logo.webp",
+			"event/{assetbundle}/logo/logo.png",
+			"event/{assetbundle}/logo/logo.webp",
+			"ondemand/event/{assetbundle}/screen/bg.png",
+			"ondemand/event/{assetbundle}/screen/bg.webp",
+			"event/{assetbundle}/screen/bg.png",
+			"event/{assetbundle}/screen/bg.webp",
+			"ondemand/home/banner/{assetbundle}/{assetbundle}.png",
+			"ondemand/home/banner/{assetbundle}/{assetbundle}.webp",
+			"home/banner/{assetbundle}/{assetbundle}.png",
+			"home/banner/{assetbundle}/{assetbundle}.webp",
+		},
+		"card:thumbnail": {
+			"startapp/thumbnail/chara/{assetbundle}_{status}.png",
+			"startapp/thumbnail/chara/{assetbundle}_{status}.webp",
+			"thumbnail/chara/{assetbundle}_{status}.png",
+			"thumbnail/chara/{assetbundle}_{status}.webp",
+		},
+		"card:image": {
+			"startapp/character/member/{assetbundle}/{card_file}.png",
+			"startapp/character/member/{assetbundle}/{card_file}.webp",
+			"character/member/{assetbundle}/{card_file}.png",
+			"character/member/{assetbundle}/{card_file}.webp",
+		},
+		"music:jacket": {
+			"startapp/music/jacket/{assetbundle}/{assetbundle}.png",
+			"startapp/music/jacket/{assetbundle}/{assetbundle}.webp",
+			"music/jacket/{assetbundle}/{assetbundle}.png",
+			"music/jacket/{assetbundle}/{assetbundle}.webp",
+		},
+	}
+
 	sekaiAssetsOnce sync.Once
 	sekaiAssetsList []sekaiAssetSource
 
@@ -199,98 +250,69 @@ func downloadAssetWithFallback(server, label string, relativePaths []string) htm
 	return htmltemplate.URL("")
 }
 
-func downloadEventBackground(server, assetbundleName string) htmltemplate.URL {
-	if assetbundleName == "" {
-		return htmltemplate.URL("")
+func buildRelativePathsByLabel(label string) (string, []string) {
+	parts := strings.SplitN(strings.TrimSpace(label), ":", 4)
+	if len(parts) < 3 {
+		return "", nil
 	}
-	return downloadAssetWithFallback(server, "event background:"+assetbundleName, []string{
-		"ondemand/event/" + assetbundleName + "/screen/bg.png",
-		"ondemand/event/" + assetbundleName + "/screen/bg.webp",
-		"event/" + assetbundleName + "/screen/bg.png",
-		"event/" + assetbundleName + "/screen/bg.webp",
-	})
+
+	category := strings.TrimSpace(parts[0])
+	kind := strings.TrimSpace(parts[1])
+	assetbundleName := strings.TrimSpace(parts[2])
+	if category == "" || kind == "" || assetbundleName == "" {
+		return "", nil
+	}
+
+	labelType := category + ":" + kind
+	templates, ok := assetLabelPathTemplates[labelType]
+	if !ok {
+		return "", nil
+	}
+
+	status := ""
+	if len(parts) == 4 {
+		status = strings.TrimSpace(parts[3])
+	}
+	switch labelType {
+	case "card:thumbnail":
+		if status == "" {
+			status = "normal"
+		}
+	case "card:image":
+		status = strings.TrimPrefix(status, "card_")
+		if status == "" {
+			status = "normal"
+		}
+	}
+
+	cardFile := ""
+	if labelType == "card:image" {
+		cardFile = "card_" + status
+	}
+
+	replacer := strings.NewReplacer(
+		"{assetbundle}", assetbundleName,
+		"{status}", status,
+		"{card_file}", cardFile,
+	)
+
+	relativePaths := make([]string, 0, len(templates))
+	for _, tmpl := range templates {
+		relativePaths = append(relativePaths, replacer.Replace(tmpl))
+	}
+
+	normalizedLabel := labelType + ":" + assetbundleName
+	if labelType == "card:thumbnail" || labelType == "card:image" {
+		normalizedLabel += ":" + status
+	}
+	return normalizedLabel, relativePaths
 }
 
-func downloadEventLogo(server, assetbundleName string) htmltemplate.URL {
-	if assetbundleName == "" {
+func downloadAssetByLabel(server, label string) htmltemplate.URL {
+	normalizedLabel, relativePaths := buildRelativePathsByLabel(label)
+	if normalizedLabel == "" || len(relativePaths) == 0 {
+		log.Printf("[pjsk] 不支持的资源 label: %q", label)
 		return htmltemplate.URL("")
 	}
-	return downloadAssetWithFallback(server, "event logo:"+assetbundleName, []string{
-		"ondemand/event/" + assetbundleName + "/logo/logo.png",
-		"ondemand/event/" + assetbundleName + "/logo/logo.webp",
-		"event/" + assetbundleName + "/logo/logo.png",
-		"event/" + assetbundleName + "/logo/logo.webp",
-	})
-}
-
-func downloadEventBanner(server, assetbundleName string) htmltemplate.URL {
-	if assetbundleName == "" {
-		return htmltemplate.URL("")
-	}
-	return downloadAssetWithFallback(server, "event banner:"+assetbundleName, []string{
-		"ondemand/event_story/" + assetbundleName + "/screen_image/banner_event_story.png",
-		"ondemand/event_story/" + assetbundleName + "/screen_image/banner_event_story.webp",
-		"event_story/" + assetbundleName + "/screen_image/banner_event_story.png",
-		"event_story/" + assetbundleName + "/screen_image/banner_event_story.webp",
-		"ondemand/event/" + assetbundleName + "/logo/logo.png",
-		"ondemand/event/" + assetbundleName + "/logo/logo.webp",
-		"event/" + assetbundleName + "/logo/logo.png",
-		"event/" + assetbundleName + "/logo/logo.webp",
-		"ondemand/event/" + assetbundleName + "/screen/bg.png",
-		"ondemand/event/" + assetbundleName + "/screen/bg.webp",
-		"event/" + assetbundleName + "/screen/bg.png",
-		"event/" + assetbundleName + "/screen/bg.webp",
-		"ondemand/home/banner/" + assetbundleName + "/" + assetbundleName + ".png",
-		"ondemand/home/banner/" + assetbundleName + "/" + assetbundleName + ".webp",
-		"home/banner/" + assetbundleName + "/" + assetbundleName + ".png",
-		"home/banner/" + assetbundleName + "/" + assetbundleName + ".webp",
-	})
-}
-
-func downloadCardThumbnail(server, assetbundleName, status string) htmltemplate.URL {
-	if assetbundleName == "" {
-		return htmltemplate.URL("")
-	}
-	status = strings.TrimSpace(status)
-	if status == "" {
-		status = "normal"
-	}
-
-	return downloadAssetWithFallback(server, "card thumbnail:"+assetbundleName+":"+status, []string{
-		"startapp/thumbnail/chara/" + assetbundleName + "_" + status + ".png",
-		"startapp/thumbnail/chara/" + assetbundleName + "_" + status + ".webp",
-		"thumbnail/chara/" + assetbundleName + "_" + status + ".png",
-		"thumbnail/chara/" + assetbundleName + "_" + status + ".webp",
-	})
-}
-
-func downloadCardImage(server, assetbundleName, status string) htmltemplate.URL {
-	if assetbundleName == "" {
-		return htmltemplate.URL("")
-	}
-	status = strings.TrimSpace(status)
-	status = strings.TrimPrefix(status, "card_")
-	if status == "" {
-		status = "normal"
-	}
-
-	file := "card_" + status
-	return downloadAssetWithFallback(server, "card image:"+assetbundleName+":"+status, []string{
-		"startapp/character/member/" + assetbundleName + "/" + file + ".png",
-		"startapp/character/member/" + assetbundleName + "/" + file + ".webp",
-		"character/member/" + assetbundleName + "/" + file + ".png",
-		"character/member/" + assetbundleName + "/" + file + ".webp",
-	})
-}
-
-func downloadMusicJacket(server, assetbundleName string) htmltemplate.URL {
-	if assetbundleName == "" {
-		return htmltemplate.URL("")
-	}
-	return downloadAssetWithFallback(server, "music jacket:"+assetbundleName, []string{
-		"startapp/music/jacket/" + assetbundleName + "/" + assetbundleName + ".png",
-		"startapp/music/jacket/" + assetbundleName + "/" + assetbundleName + ".webp",
-		"music/jacket/" + assetbundleName + "/" + assetbundleName + ".png",
-		"music/jacket/" + assetbundleName + "/" + assetbundleName + ".webp",
-	})
+	return downloadAssetWithFallback(server, normalizedLabel, relativePaths)
 }

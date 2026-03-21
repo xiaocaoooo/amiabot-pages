@@ -147,7 +147,7 @@ func starPositions(rarity string) []int {
 	}
 }
 
-// --- 数据查询（基于 assets 缓存）---
+// --- 数据查询（基于 masterdata 缓存）---
 
 // findEvent 从缓存的 events.json 中查找活动
 func findEvent(server string, eventID int) (*pjskEvent, error) {
@@ -267,7 +267,7 @@ func findEventCards(server string, eventID int) []cardDisplay {
 		if !ok {
 			continue
 		}
-		thumb := downloadCardThumbnail(server, card.AssetbundleName, "normal")
+		thumb := downloadAssetByLabel(server, "card:thumbnail:"+card.AssetbundleName+":normal")
 
 		rarity := card.CardRarityType
 		if name, ok := rarityNames[rarity]; ok {
@@ -379,9 +379,9 @@ func EventHandler(c *gin.Context) {
 	}
 
 	// 下载背景图、徽标、横幅
-	bgDataURL := downloadEventBackground(server, target.AssetbundleName)
-	logoDataURL := downloadEventLogo(server, target.AssetbundleName)
-	bannerDataURL := downloadEventBanner(server, target.AssetbundleName)
+	bgDataURL := downloadAssetByLabel(server, "event:background:"+target.AssetbundleName)
+	logoDataURL := downloadAssetByLabel(server, "event:logo:"+target.AssetbundleName)
+	bannerDataURL := downloadAssetByLabel(server, "event:banner:"+target.AssetbundleName)
 
 	// 查找活动关联卡面
 	cards := findEventCards(server, eventID)

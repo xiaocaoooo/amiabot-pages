@@ -135,21 +135,35 @@ docker compose up -d --build
 /pjsk/card?id=1001&server=jp
 ```
 
-### PJSK 资源缓存接口
+### PJSK MasterData 缓存接口
 
-- `GET /pjsk/assets/refresh`
+- `GET /pjsk/masterdata/refresh`
   - 触发全服务器缓存刷新
   - 可选参数：`force=true`（忽略 commit SHA，强制下载）
-- `GET /pjsk/assets/{repo}/{file}`
+- `GET /pjsk/masterdata/{repo}/{file}`
   - 读取本地缓存 JSON
 
 示例：
 
 ```text
-/pjsk/assets/refresh
-/pjsk/assets/refresh?force=true
-/pjsk/assets/sekai-master-db-diff/events.json
-/pjsk/assets/sekai-master-db-cn-diff/events.json
+/pjsk/masterdata/refresh
+/pjsk/masterdata/refresh?force=true
+/pjsk/masterdata/sekai-master-db-diff/events.json
+/pjsk/masterdata/sekai-master-db-cn-diff/events.json
+```
+
+### PJSK 资源二进制接口
+
+- `GET /pjsk/assets/{label}`
+  - 直接返回资源二进制内容
+  - 可选参数：`server=jp/cn/en/tw/kr`（默认 `jp`）
+  - 返回带 `Cache-Control: public, max-age=31536000, immutable`，并复用服务内图片缓存
+
+示例：
+
+```text
+/pjsk/assets/event:background:event_marathon_001?server=jp
+/pjsk/assets/card:thumbnail:res001_no001_rip:normal?server=jp
 ```
 
 ## 缓存机制说明
@@ -170,7 +184,7 @@ docker compose up -d --build
 
 ## 注意事项
 
-- 服务启动后，PJSK 资源是后台拉取；若首次访问过早，可能出现“缓存文件不存在”提示，可稍后重试或手动调用 `/pjsk/assets/refresh`
+- 服务启动后，PJSK MasterData 是后台拉取；若首次访问过早，可能出现“缓存文件不存在”提示，可稍后重试或手动调用 `/pjsk/masterdata/refresh`
 - 运行环境需能访问以下外部站点：
   - `api.github.com`
   - `sekai-world.github.io`

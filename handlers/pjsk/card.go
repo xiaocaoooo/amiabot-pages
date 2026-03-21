@@ -139,10 +139,10 @@ func CardHandler(c *gin.Context) {
 	}
 
 	// 缩略图
-	thumb := downloadCardThumbnail(server, card.AssetbundleName, "normal")
+	thumb := downloadAssetByLabel(server, "card:thumbnail:"+card.AssetbundleName+":normal")
 
 	// 大图
-	cardImage := downloadCardImage(server, card.AssetbundleName, "normal")
+	cardImage := downloadAssetByLabel(server, "card:image:"+card.AssetbundleName+":normal")
 
 	rarity := card.CardRarityType
 	sIcon := starDataURL
@@ -184,8 +184,8 @@ func CardHandler(c *gin.Context) {
 
 	if hasSpecialTraining(rarity) {
 		d.HasAfter = true
-		d.ThumbnailAfter = downloadCardThumbnail(server, card.AssetbundleName, "after_training")
-		d.CardImageAfter = downloadCardImage(server, card.AssetbundleName, "after_training")
+		d.ThumbnailAfter = downloadAssetByLabel(server, "card:thumbnail:"+card.AssetbundleName+":after_training")
+		d.CardImageAfter = downloadAssetByLabel(server, "card:image:"+card.AssetbundleName+":after_training")
 		d.FrameAfter = frameDataURLs[rarity]
 		d.StarsAfter = starPositions(rarity)
 		d.StarIconAfter = sIcon

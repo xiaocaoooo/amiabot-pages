@@ -36,10 +36,11 @@ func main() {
 		pjskGroup.GET("/event/current", pjsk.CurrentEventHandler)
 		pjskGroup.GET("/card", pjsk.CardHandler)
 		pjskGroup.GET("/music", pjsk.MusicHandler)
-		pjskGroup.GET("/assets/*path", pjsk.AssetHandler)
+		pjskGroup.GET("/masterdata/*path", pjsk.MasterDataHandler)
+		pjskGroup.GET("/assets/:label", pjsk.AssetBinaryHandler)
 	}
 
-	pjsk.InitAssets()
+	pjsk.InitMasterData()
 
 	imgcache.Default.LoadIndex()
 	imgcache.Default.StartCleanupTicker(10 * time.Minute)

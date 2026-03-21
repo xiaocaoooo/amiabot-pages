@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const assetsCacheDir = "cache/pjsk"
+const masterDataCacheDir = "cache/pjsk"
 
 var allServers = []string{"jp", "cn", "en", "tw", "kr"}
 
@@ -41,13 +41,12 @@ func dbDiffName(server string) string {
 }
 
 func serverCacheDir(server string) string {
-	return filepath.Join(assetsCacheDir, dbDiffName(server))
+	return filepath.Join(masterDataCacheDir, dbDiffName(server))
 }
 
 func remoteURL(server, file string) string {
 	return "https://sekai-world.github.io/" + dbDiffName(server) + "/" + file
 }
-
 
 // ghContentsEntry GitHub Contents API 返回的单个条目
 type ghContentsEntry struct {
@@ -301,13 +300,13 @@ func ReadCachedJSON(server, file string) ([]byte, error) {
 	path := filepath.Join(serverCacheDir(server), file)
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("缓存文件不存在: %s/%s，请先调用 /pjsk/assets/refresh", server, file)
+		return nil, fmt.Errorf("缓存文件不存在: %s/%s，请先调用 /pjsk/masterdata/refresh", server, file)
 	}
 	return data, nil
 }
 
-// InitAssets 启动时加载 commit SHA，后台全量刷新
-func InitAssets() {
+// InitMasterData 启动时加载 commit SHA，后台全量刷新
+func InitMasterData() {
 	for _, s := range allServers {
 		if sha := loadSavedSHA(s); sha != "" {
 			commitSHAs.Store(s, sha)
@@ -335,10 +334,10 @@ func InitAssets() {
 	}()
 }
 
-// AssetHandler GET /pjsk/assets/*path
-// /pjsk/assets/refresh → 刷新缓存
-// /pjsk/assets/sekai-master-db-diff/xxx.json → 返回缓存 JSON
-func AssetHandler(c *gin.Context) {
+// MasterDataHandler GET /pjsk/masterdata/*path
+// /pjsk/masterdata/refresh → 刷新缓存
+// /pjsk/masterdata/sekai-master-db-diff/xxx.json → 返回缓存 JSON
+func MasterDataHandler(c *gin.Context) {
 	raw := strings.TrimPrefix(c.Param("path"), "/")
 
 	if raw == "refresh" {
