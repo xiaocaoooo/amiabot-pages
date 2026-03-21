@@ -1,0 +1,97 @@
+{{ define "status/zeabur" }}
+{{ template "layout/start" . }}
+{{ template "status/zeabur/content" . }}
+{{ template "layout/end" . }}
+{{ end }}
+
+{{ define "status/zeabur/content" }}
+{{ if .Error }}
+<div class="container error-container">
+    <div class="label">错误</div>
+    <div class="value" style="white-space: pre-wrap;">{{ .Error }}</div>
+</div>
+{{ else }}
+{{ $s := .Status }}
+<div class="container primary-container">
+    <div class="label">Zeabur 状态总览</div>
+    <div class="value">最近拉取时间：{{ $s.FetchedAt }}</div>
+</div>
+
+<div style="display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 8px;">
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">服务器总数</div>
+        <div class="value">{{ $s.ServerCount }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">在线服务器</div>
+        <div class="value">{{ $s.OnlineCount }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">项目总数</div>
+        <div class="value">{{ $s.ProjectCount }}</div>
+    </div>
+    <div class="container secondary-container" style="margin-bottom: 0;">
+        <div class="label">服务总数</div>
+        <div class="value">{{ $s.ServiceCount }}</div>
+    </div>
+</div>
+
+<div class="container" style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant); margin-top: 8px;">
+    <div class="label">服务器状态</div>
+    {{ if $s.Servers }}
+    {{ range $s.Servers }}
+    <div style="padding: 10px 0; border-bottom: 1px solid var(--color-outline-variant);">
+        <div style="display:flex; justify-content: space-between; align-items: center; gap: 8px;">
+            <div style="font-weight: bold; font-size: 15px;">{{ .Name }}</div>
+            {{ if .Online }}
+            <span style="font-size: 12px; font-weight: bold; color: #0f7a2f;">ONLINE</span>
+            {{ else }}
+            <span style="font-size: 12px; font-weight: bold; color: #b3261e;">OFFLINE</span>
+            {{ end }}
+        </div>
+        <div style="font-size: 12px; color: var(--color-on-surface-variant);">位置：{{ .Location }} · 延迟：{{ .Latency }}</div>
+        <div style="font-size: 12px; color: var(--color-on-surface-variant); margin-top: 4px; line-height: 1.7;">
+            <div>CPU：{{ .CPU }}</div>
+            <div>内存：{{ .Memory }}</div>
+            <div>磁盘：{{ .Disk }}</div>
+        </div>
+    </div>
+    {{ end }}
+    {{ else }}
+    <div style="font-size: 14px; color: var(--color-on-surface-variant);">暂无服务器数据</div>
+    {{ end }}
+</div>
+
+<div class="container" style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant); margin-top: 8px;">
+    <div class="label">项目与服务</div>
+    {{ if $s.Projects }}
+    {{ range $s.Projects }}
+    <div style="padding: 10px 0; border-bottom: 1px solid var(--color-outline-variant);">
+        <div style="display:flex; justify-content: space-between; align-items: center; gap: 8px;">
+            <div style="display:flex; align-items:center; gap:8px; min-width: 0;">
+                {{ if .IconURL }}
+                <img src="{{ .IconURL }}" alt="{{ .Name }}" style="width: 22px; height: 22px; border-radius: 5px; object-fit: cover;">
+                {{ end }}
+                <span style="font-weight: bold; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ .Name }}</span>
+            </div>
+            <span style="font-size: 12px; color: var(--color-on-surface-variant);">{{ .RunningCount }}/{{ .ServiceCount }} Running</span>
+        </div>
+        <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px;">
+            {{ if .Services }}
+            {{ range .Services }}
+            <span style="padding: 4px 8px; border-radius: 999px; font-size: 11px; border: 1px solid var(--color-outline-variant); background: #fff;">
+                {{ .Name }} · {{ .Status }}
+            </span>
+            {{ end }}
+            {{ else }}
+            <span style="font-size: 12px; color: var(--color-on-surface-variant);">暂无服务</span>
+            {{ end }}
+        </div>
+    </div>
+    {{ end }}
+    {{ else }}
+    <div style="font-size: 14px; color: var(--color-on-surface-variant);">暂无项目数据</div>
+    {{ end }}
+</div>
+{{ end }}
+{{ end }}

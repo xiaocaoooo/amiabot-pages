@@ -64,6 +64,7 @@ docker compose up -d --build
 |---|---|---|
 | `PORT` | `8080` | HTTP 服务端口 |
 | `GITHUB_TOKEN` | 空 | 可选。用于调用 GitHub API 拉取 PJSK 仓库信息时提升限额 |
+| `ZEABUR_TOKEN` | 空 | 可选。用于 `/status/zeabur` 页面查询 Zeabur GraphQL 状态（也可在请求头 `Authorization: Bearer <token>` 传入） |
 | `IMAGE_CACHE_MAX_SIZE` | `512` | 图片缓存上限（单位 MB） |
 | `SEKAI_ASSET` | `snowy,uni,haruki` | PJSK 图片资源源优先级。支持 `snowy` / `uni` / `haruki`，可用逗号配置多个，按顺序回退重试 |
 
@@ -73,6 +74,15 @@ docker compose up -d --build
 
 - `GET /health`
 - 响应：`{"status":"ok"}`
+
+### Zeabur 状态
+
+- `GET /status/zeabur`
+- 认证：
+  - 优先读取请求头：`Authorization: Bearer <token>`
+  - 未提供请求头时，回退使用环境变量 `ZEABUR_TOKEN`
+- 响应：
+  - 返回 HTML 页面，按现有卡片风格展示服务器/项目/服务状态信息
 
 ### Bilibili
 
