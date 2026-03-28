@@ -53,6 +53,9 @@ func main() {
 	pixivGroup := r.Group("/pixiv", groupMiddlewares...)
 	{
 		pixivGroup.GET("/illust/info", pixiv.IllustInfoHandler)
+		pixivGroup.GET("/illust/media", pixiv.IllustMediaHandler)
+		pixivGroup.GET("/image", pixiv.PixivImageProxyHandler)
+		pixivGroup.GET("/ugoira/gif", pixiv.PixivUgoiraGIFHandler)
 	}
 
 	pjskGroup := r.Group("/pjsk", groupMiddlewares...)

@@ -87,6 +87,24 @@ type pixivOAuthToken struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+type pixivUgoiraMetadataResponse struct {
+	UgoiraMetadata pixivUgoiraMetadata `json:"ugoira_metadata"`
+}
+
+type pixivUgoiraMetadata struct {
+	ZipURLs pixivUgoiraZipURLs `json:"zip_urls"`
+	Frames  []pixivUgoiraFrame `json:"frames"`
+}
+
+type pixivUgoiraZipURLs struct {
+	Medium string `json:"medium"`
+}
+
+type pixivUgoiraFrame struct {
+	File  string `json:"file"`
+	Delay int    `json:"delay"`
+}
+
 type pixivIllustDetailResponse struct {
 	Illust pixivIllust `json:"illust"`
 }
@@ -381,6 +399,47 @@ func fetchPixivIllustDetail(accessToken string, pid int) (*pixivIllust, error) {
 	return &payload.Illust, nil
 }
 
+func fetchPixivUgoiraMetadata(accessToken string, pid int) (*pixivUgoiraMetadata, error) {
+	if strings.TrimSpace(accessToken) == "" {
+		return nil, fmt.Errorf(pixivTokenErrorMsg)
+	}
+
+	metadataURL := pixivAppAPIBaseURL + "/v1/ugoira/metadata?illust_id=" + strconv.Itoa(pid)
+	req, err := http.NewRequest(http.MethodGet, metadataURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("创建 Pixiv 动图元数据请求失败: %w", err)
+	}
+	applyPixivCommonHeaders(req)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	resp, err := pixivHTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("请求 Pixiv 动图元数据失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("读取 Pixiv 动图元数据失败: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, parsePixivAPIError(resp.StatusCode, body)
+	}
+
+	var payload pixivUgoiraMetadataResponse
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, fmt.Errorf("解析 Pixiv 动图元数据失败: %w", err)
+	}
+	if strings.TrimSpace(payload.UgoiraMetadata.ZipURLs.Medium) == "" {
+		return nil, fmt.Errorf("Pixiv 动图元数据未返回 zip_url")
+	}
+	if len(payload.UgoiraMetadata.Frames) == 0 {
+		return nil, fmt.Errorf("Pixiv 动图元数据未返回帧信息")
+	}
+	return &payload.UgoiraMetadata, nil
+}
+
 func getPixivIllustDetail(c *gin.Context, pid int) (*pixivIllust, error) {
 	accessToken, source, err := resolvePixivAccessToken(c)
 	if err != nil {
@@ -409,4 +468,34 @@ func getPixivIllustDetail(c *gin.Context, pid int) (*pixivIllust, error) {
 	}
 
 	return fetchPixivIllustDetail(refreshed.AccessToken, pid)
+}
+
+func getPixivUgoiraMetadata(c *gin.Context, pid int) (*pixivUgoiraMetadata, error) {
+	accessToken, source, err := resolvePixivAccessToken(c)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata, err := fetchPixivUgoiraMetadata(accessToken, pid)
+	if err == nil {
+		return metadata, nil
+	}
+
+	apiErr, ok := err.(*pixivAPIError)
+	if !ok || !apiErr.OAuth || source == pixivTokenSourceHeader {
+		return nil, err
+	}
+
+	refreshToken := strings.TrimSpace(os.Getenv("PIXIV_REFRESH_TOKEN"))
+	if refreshToken == "" {
+		return nil, err
+	}
+
+	clearPixivAccessTokenCache()
+	refreshed, refreshErr := refreshPixivAccessToken(refreshToken)
+	if refreshErr != nil {
+		return nil, refreshErr
+	}
+
+	return fetchPixivUgoiraMetadata(refreshed.AccessToken, pid)
 }
