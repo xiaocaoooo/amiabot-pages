@@ -2,9 +2,10 @@
 
 基于 Go + Gin 的页面服务，用于渲染 AmiaBot 相关信息卡片页面。
 
-当前包含两类页面能力：
+当前包含三类页面能力：
 
 - `Bilibili` 视频信息卡片（封面、UP 主、统计、分 P）
+- `Pixiv` 插画信息页（主图、作者、标签、统计、多页预览）
 - `PJSK` 活动页与卡面页（多服数据、活动进度、卡面预览）
 
 ## 特性
@@ -28,6 +29,9 @@
 ├── main.go                    # 服务入口与路由注册
 ├── handlers/
 │   ├── bilibili/video.go      # B 站视频卡片
+│   ├── pixiv/
+│   │   ├── client.go          # Pixiv App API / OAuth 请求封装
+│   │   └── illust.go          # Pixiv 插画信息页
 │   └── pjsk/
 │       ├── assets.go          # PJSK JSON 资源下载与缓存
 │       ├── asset_source.go    # PJSK 图片资源多源解析与重试
@@ -66,6 +70,9 @@ docker compose up -d --build
 |---|---|---|
 | `PORT` | `8080` | HTTP 服务端口 |
 | `GITHUB_TOKEN` | 空 | 可选。用于调用 GitHub API 拉取 PJSK 仓库信息时提升限额 |
+| `PIXIV_ACCESS_TOKEN` | 空 | 可选。Pixiv App API access token；也可在请求头 `Authorization: Bearer <token>` 传入 |
+| `PIXIV_REFRESH_TOKEN` | 空 | 可选但推荐。用于自动换取/刷新 Pixiv access token，供 `/pixiv/illust/info` 使用 |
+| `PIXIV_TAG_BLACKLIST` | 空 | 可选。Pixiv 标签黑名单；命中后不在页面展示。支持按标签原名或翻译名匹配，大小写不敏感，支持用 `,` / `，` / `;` / `；` / 换行分隔 |
 | `ZEABUR_TOKEN` | 空 | 可选。用于 `/status/zeabur` 页面查询 Zeabur GraphQL 状态（也可在请求头 `Authorization: Bearer <token>` 传入） |
 | `IMAGE_CACHE_MAX_SIZE` | `512` | 图片缓存上限（单位 MB） |
 | `SEKAI_ASSET` | `snowy,uni,haruki` | PJSK 图片资源源优先级。支持 `snowy` / `uni` / `haruki`，可用逗号配置多个，按顺序回退重试 |
@@ -82,6 +89,7 @@ docker compose up -d --build
 
 - `GET /status/*`
 - `GET /bilibili/*`
+- `GET /pixiv/*`
 - `GET /pjsk/*`
 - `GET /health` 不受影响
 
@@ -123,6 +131,7 @@ Valkey value 格式（JSON 对象）：
 /pjsk/card?param_id=abc123
 /pjsk/card?param_id=abc123&id=2002   # URL 中 id 会覆盖 Valkey 中 id
 /bilibili/video?param_id=video_job_9
+/pixiv/illust/info?param_id=pixiv_job_1
 ```
 
 错误语义：
@@ -178,6 +187,33 @@ Valkey value 格式（JSON 对象）：
 
 - 若不传参数，会返回默认示例卡片页面
 - 页面为 HTML（不是 JSON）
+
+### Pixiv 插画信息
+
+- `GET /pixiv/illust/info`
+- 参数：
+  - `pid`：插画 PID（必填）
+- 鉴权优先级：
+  - 请求头 `Authorization: Bearer <access_token>`
+  - 环境变量 `PIXIV_ACCESS_TOKEN`
+  - 环境变量 `PIXIV_REFRESH_TOKEN`（自动换取并缓存 access token）
+
+示例：
+
+```text
+/pixiv/illust/info?pid=125547965
+/pixiv/illust/info?param_id=abc123
+```
+
+说明：
+
+- 页面为 HTML（不是 JSON）
+- 若 access token 失效且配置了 `PIXIV_REFRESH_TOKEN`，服务会自动刷新并重试一次
+- 可通过环境变量 `PIXIV_TAG_BLACKLIST` 过滤不希望展示的标签
+  - 同时匹配标签原名与翻译名
+  - 匹配大小写不敏感
+  - 示例：`PIXIV_TAG_BLACKLIST="R-18,原创,nsfw"`
+- 页面会展示主图、作者、标签、统计信息、系列信息与多页预览
 
 ### PJSK 活动
 
@@ -278,6 +314,9 @@ Valkey value 格式（JSON 对象）：
   - `assets.unipjsk.com`
   - `sekai-assets-bdf29c81.seiunx.net`
   - `api.bilibili.com`
+  - `app-api.pixiv.net`
+  - `oauth.secure.pixiv.net`
+  - `i.pximg.net`
 
 ## 开发建议
 
