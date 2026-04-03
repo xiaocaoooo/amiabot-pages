@@ -43,6 +43,7 @@ func main() {
 		"templates/pjsk/event.html",
 		"templates/pjsk/card.html",
 		"templates/pjsk/music.html",
+		"templates/pjsk/profile.html",
 		"templates/status/zeabur.html",
 	)
 	bilibiliGroup := r.Group("/bilibili", groupMiddlewares...)
@@ -64,6 +65,7 @@ func main() {
 		pjskGroup.GET("/event/current", pjsk.CurrentEventHandler)
 		pjskGroup.GET("/card", pjsk.CardHandler)
 		pjskGroup.GET("/music", pjsk.MusicHandler)
+		pjskGroup.GET("/profile", pjsk.ProfileHandler)
 		pjskGroup.GET("/masterdata/*path", pjsk.MasterDataHandler)
 		pjskGroup.GET("/assets/:label", pjsk.AssetBinaryHandler)
 	}

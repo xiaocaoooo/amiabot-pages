@@ -6,7 +6,7 @@
 
 - `Bilibili` 视频信息卡片（封面、UP 主、统计、分 P）
 - `Pixiv` 插画信息页（主图、作者、标签、统计、多页预览）
-- `PJSK` 活动页与卡面页（多服数据、活动进度、卡面预览）
+- `PJSK` 活动页、卡面页、音乐页与玩家 Profile 页（多服数据、活动进度、卡面预览、玩家卡组与游玩统计）
 
 ## 特性
 
@@ -36,7 +36,8 @@
 │       ├── assets.go          # PJSK JSON 资源下载与缓存
 │       ├── asset_source.go    # PJSK 图片资源多源解析与重试
 │       ├── event.go           # 活动页面 / 当前活动跳转
-│       └── card.go            # 卡面页面
+│       ├── card.go            # 卡面页面
+│       └── profile.go         # 玩家 Profile 页面
 ├── templates/                 # HTML 模板
 ├── pkg/paramid/               # param_id -> Valkey 参数注入中间件
 ├── static/pjsk/card/          # 卡框、属性图标、星星素材
@@ -76,6 +77,8 @@ docker compose up -d --build
 | `ZEABUR_TOKEN` | 空 | 可选。用于 `/status/zeabur` 页面查询 Zeabur GraphQL 状态（也可在请求头 `Authorization: Bearer <token>` 传入） |
 | `IMAGE_CACHE_MAX_SIZE` | `512` | 图片缓存上限（单位 MB） |
 | `SEKAI_ASSET` | `snowy,uni,haruki` | PJSK 图片资源源优先级。支持 `snowy` / `uni` / `haruki`，可用逗号配置多个，按顺序回退重试 |
+| `PJSK_PROFILE_BASEURL` | 空 | 可选。PJSK Profile 上游 API 基础地址，例如 `https://example.com/api`；`/pjsk/profile` 会请求 `{baseurl}/{server}/{id}/profile` |
+| `PJSK_PROFILE_HEADERS` | 空 / `{}` | 可选。PJSK Profile 上游请求头，格式为 JSON 对象字符串，例如 `{"x-moe-sekai-token":"<token>"}` 或 `{"Authorization":"Bearer <token>"}` |
 | `VALKEY_ADDR` | 空 | Valkey 地址（示例：`127.0.0.1:6379`）。为空时不启用 `param_id` 注入功能 |
 | `VALKEY_PASSWORD` | 空 | 可选。Valkey 密码 |
 | `VALKEY_DB` | `0` | 可选。Valkey DB 编号 |
@@ -255,6 +258,31 @@ Valkey value 格式（JSON 对象）：
 
 ```text
 /pjsk/card?id=1001&server=jp
+```
+
+### PJSK 玩家 Profile
+
+- `GET /pjsk/profile`
+- 参数：
+  - `id`：玩家 ID（必填）
+  - `server`：服务器，支持 `jp/cn/en/tw/kr`（默认 `jp`）
+
+示例：
+
+```text
+/pjsk/profile?id=1234567890123456&server=jp
+```
+
+说明：
+
+- 该页面会请求外部 PJSK Profile API，并渲染玩家基础资料、主力卡组与游玩统计
+- 需要通过环境变量配置上游地址：`PJSK_PROFILE_BASEURL`
+- 如上游需要鉴权，可通过 `PJSK_PROFILE_HEADERS` 传入任意请求头
+- 例如对接 Moe-Sekai API：
+
+```text
+PJSK_PROFILE_BASEURL=https://example.com/api
+PJSK_PROFILE_HEADERS={"x-moe-sekai-token":"<token>"}
 ```
 
 ### PJSK MasterData 缓存接口

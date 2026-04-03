@@ -51,7 +51,8 @@
 </div>
 
 {{ if $m.Difficulties }}
-<div class="container" style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant); margin-top: 8px;">
+<div class="container"
+    style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant); margin-top: 8px;">
     <div class="label">难度信息</div>
     <div style="display: flex; flex-wrap: nowrap; gap: 6px; margin-top: 6px; overflow-x: auto;">
         {{ range $m.Difficulties }}
@@ -64,9 +65,11 @@
         {{ if eq $diff "EXPERT" }}{{ $bgColor = "#E84D53" }}{{ end }}
         {{ if eq $diff "MASTER" }}{{ $bgColor = "#BB58B8" }}{{ end }}
         {{ if eq $diff "APPEND" }}{{ $bgColor = "#EE92BC" }}{{ end }}
-        <div style="flex: 1; min-width: 0; text-align: center; padding: 6px 4px; background: {{ $bgColor }}; border-radius: 6px;">
+        <div
+            style="flex: 1; min-width: 0; text-align: center; padding: 6px 4px; background: {{ $bgColor }}; border-radius: 6px;">
             <div style="font-size: 10px; font-weight: bold; color: {{ $textColor }};">{{ $diff }}</div>
-            <div style="font-size: 14px; font-weight: bold; margin: 2px 0; color: {{ $textColor }};">Lv.{{ .PlayLevel }}</div>
+            <div style="font-size: 14px; font-weight: bold; margin: 2px 0; color: {{ $textColor }};">Lv.{{ .PlayLevel }}
+            </div>
             <div style="font-size: 9px; color: rgba(255,255,255,0.85);">{{ .TotalNoteCount }} notes</div>
         </div>
         {{ end }}
@@ -75,13 +78,15 @@
 {{ end }}
 
 {{ if $m.Vocalists }}
-<div class="container" style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant); margin-top: 8px;">
+<div class="container"
+    style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant); margin-top: 8px;">
     <div class="label">演唱版本</div>
     <div style="margin-top: 6px;">
         {{ range $m.Vocalists }}
         <div style="padding: 6px 0; border-bottom: 1px solid var(--color-outline-variant);">
             <div style="font-weight: bold;">{{ .VocalType }}</div>
-            {{ if .Caption }}<div style="font-size: 12px; color: var(--color-on-surface-variant);">{{ .Caption }}</div>{{ end }}
+            {{ if .Caption }}<div style="font-size: 12px; color: var(--color-on-surface-variant);">{{ .Caption }}</div>
+            {{ end }}
         </div>
         {{ end }}
     </div>
@@ -94,7 +99,8 @@
     <div style="margin-top: 6px;">
         {{ range $m.Events }}
         <div style="padding: 4px 0;">
-            <a href="/pjsk/event?id={{ .ID }}&server={{ $m.ServerKey }}" style="color: var(--color-primary); text-decoration: none;">
+            <a href="/pjsk/event?id={{ .ID }}&server={{ $m.ServerKey }}"
+                style="color: var(--color-primary); text-decoration: none;">
                 #{{ .ID }} {{ .Name }}
             </a>
         </div>
@@ -111,4 +117,8 @@
 {{ end }}
 
 {{ end }}
+{{ end }}
+
+{{ define "footer/extra" }}
+Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />
 {{ end }}

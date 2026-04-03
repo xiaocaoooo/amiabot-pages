@@ -10,4 +10,6 @@ services:
     environment:
       PORT: "8080"
       SEKAI_ASSET: "snowy,uni,haruki"
+      PJSK_PROFILE_BASEURL: ""
+      PJSK_PROFILE_HEADERS: '{}'
     restart: unless-stopped

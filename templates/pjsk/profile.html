@@ -1,0 +1,484 @@
+{{ define "pjsk/profile" }}
+{{ template "layout/start" . }}
+{{ template "pjsk/profile/content" . }}
+{{ template "layout/end" . }}
+{{ end }}
+
+{{ define "pjsk/profile/content" }}
+{{ if .Error }}
+<div class="container error-container">
+    <div class="label">错误</div>
+    <div class="value">{{ .Error }}</div>
+</div>
+{{ else }}
+{{ $p := .Profile }}
+<style>
+    .profile-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .profile-card {
+        background: var(--color-surface-container-low);
+        border: 1px solid var(--color-outline-variant);
+        border-radius: var(--radius-sm);
+        padding: 12px;
+    }
+
+    .profile-identity {
+        display: grid;
+        grid-template-columns: 124px minmax(0, 1fr);
+        gap: 16px;
+        align-items: center;
+    }
+
+    .profile-avatar-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .profile-avatar-fallback {
+        width: 108px;
+        height: 108px;
+        border-radius: 18px;
+        background: var(--color-secondary-container);
+        color: var(--color-on-secondary-container);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 28px;
+    }
+
+    .profile-player-name {
+        font-size: 30px;
+        font-weight: 800;
+        line-height: 1.2;
+        color: var(--color-on-primary-container);
+        word-break: break-word;
+    }
+
+    .profile-player-sub {
+        margin-top: 8px;
+        font-size: 15px;
+        color: var(--color-on-surface-variant);
+    }
+
+    .profile-pill-row {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .profile-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 30px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--color-on-primary-container);
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .profile-pill.subtle {
+        background: rgba(255, 255, 255, 0.72);
+        font-weight: 600;
+    }
+
+    .profile-leader-meta {
+        margin-top: 12px;
+        display: grid;
+        gap: 4px;
+        font-size: 13px;
+        color: var(--color-on-surface-variant);
+    }
+
+    .profile-info-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .profile-info-value {
+        font-size: 15px;
+        line-height: 1.7;
+        color: var(--color-on-surface-variant);
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .profile-honor-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 8px;
+    }
+
+    .profile-honor-item {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.94));
+        border: 1px solid var(--color-outline-variant);
+        border-radius: 14px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .profile-honor-item.main {
+        grid-column: 1 / -1;
+    }
+
+    .profile-honor-artwork {
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(129, 115, 123, 0.18);
+        border-radius: 12px;
+        padding: 8px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .profile-honor-item.sub .profile-honor-artwork {
+        padding: 6px;
+    }
+
+    .profile-honor-artwork svg {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+
+    .profile-honor-title {
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--color-on-surface);
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .profile-honor-subtitle {
+        font-size: 12px;
+        color: var(--color-on-surface-variant);
+        line-height: 1.5;
+        word-break: break-word;
+    }
+
+    .profile-honor-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .profile-honor-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--color-secondary-container);
+        color: var(--color-on-secondary-container);
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .profile-honor-desc {
+        font-size: 12px;
+        color: var(--color-on-surface-variant);
+        line-height: 1.55;
+        word-break: break-word;
+    }
+
+    .profile-deck-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        margin-top: 8px;
+    }
+
+    .profile-deck-card {
+        width: 108px;
+        text-align: center;
+    }
+
+    .profile-deck-text {
+        margin-top: 6px;
+        font-size: 11px;
+        line-height: 1.4;
+        color: var(--color-on-surface-variant);
+    }
+
+    .profile-deck-text strong {
+        display: block;
+        color: var(--color-on-surface);
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .profile-play-grid {
+        display: grid;
+        grid-template-columns: 88px repeat(6, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 8px;
+        align-items: stretch;
+    }
+
+    .profile-play-head,
+    .profile-play-row-label,
+    .profile-play-cell {
+        min-height: 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 6px;
+        border: 1px solid transparent;
+    }
+
+    .profile-play-head {
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+    }
+
+    .profile-play-row-label {
+        background: var(--color-secondary-container);
+        color: var(--color-on-secondary-container);
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .profile-play-cell {
+        font-size: 16px;
+        font-weight: 900;
+    }
+
+    .profile-radar-wrap {
+        margin-top: 8px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.94));
+        border: 1px solid var(--color-outline-variant);
+        padding: 12px;
+    }
+
+    .profile-radar-note {
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--color-on-surface-variant);
+        line-height: 1.6;
+        text-align: center;
+    }
+
+    .profile-challenge-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .profile-challenge-item {
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid var(--color-outline-variant);
+        border-radius: 10px;
+        padding: 10px;
+    }
+
+    .profile-challenge-item .value {
+        font-size: 1em;
+        word-break: break-word;
+    }
+
+    @media (max-width: 840px) {
+        .profile-identity {
+            grid-template-columns: 1fr;
+            justify-items: center;
+            text-align: center;
+        }
+
+        .profile-play-grid {
+            grid-template-columns: 72px repeat(6, minmax(0, 1fr));
+            gap: 6px;
+        }
+
+        .profile-honor-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .profile-honor-item.main {
+            grid-column: auto;
+        }
+    }
+</style>
+
+<div class="profile-stack">
+    <div class="container primary-container profile-identity">
+        <div class="profile-avatar-wrap">
+            {{ if $p.HasLeaderCard }}
+            {{ $leader := $p.LeaderCard }}
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 156 156" style="width: 120px; height: 120px;">
+                {{ if $leader.Thumbnail }}<image href="{{ $leader.Thumbnail }}" x="8" y="8" height="140" width="140">
+                </image>{{ end }}
+                {{ if $leader.Frame }}<image href="{{ $leader.Frame }}" x="0" y="0" height="156" width="156"></image>{{
+                end }}
+                {{ if $leader.AttrIcon }}<image href="{{ $leader.AttrIcon }}" x="1" y="1" width="35" height="35">
+                </image>{{ end }}
+                {{ range $leader.Stars }}<image href="{{ $leader.StarIcon }}" x="{{ . }}" y="118" width="28"
+                    height="28"></image>{{ end }}
+            </svg>
+            {{ else }}
+            <div class="profile-avatar-fallback">P</div>
+            {{ end }}
+        </div>
+
+        <div>
+            <div class="label">名片</div>
+            <div class="profile-player-name">{{ $p.Name }}</div>
+            <div class="profile-player-sub">{{ $p.Server }} · ID {{ $p.UserID }}</div>
+            <div class="profile-pill-row">
+                <span class="profile-pill">Rank {{ $p.Rank }}</span>
+                {{ if $p.UpdatedAt }}<span class="profile-pill subtle">更新时间 {{ $p.UpdatedAt }}</span>{{ end }}
+            </div>
+            {{ if $p.HasLeaderCard }}
+            <div class="profile-leader-meta">
+                <div>队长卡：{{ $p.LeaderCard.CharacterName }}</div>
+                {{ if $p.LeaderCard.Prefix }}<div>卡名：{{ $p.LeaderCard.Prefix }}</div>{{ end }}
+                <div>{{ $p.LeaderCard.Rarity }} · {{ $p.LeaderCard.Attr }} · {{ $p.LeaderCard.ImageMode }}</div>
+            </div>
+            {{ end }}
+        </div>
+    </div>
+
+    {{ if or $p.TwitterID $p.Word }}
+    <div class="profile-info-grid">
+        {{ if $p.TwitterID }}
+        <div class="profile-card">
+            <div class="label">X / Twitter</div>
+            <div class="value">@{{ $p.TwitterID }}</div>
+        </div>
+        {{ end }}
+        {{ if $p.Word }}
+        <div class="profile-card">
+            <div class="label">留言</div>
+            <div class="profile-info-value">{{ $p.Word }}</div>
+        </div>
+        {{ end }}
+    </div>
+    {{ end }}
+
+    {{ if $p.HasHonors }}
+    <div class="profile-card">
+        <div class="label">头衔</div>
+        <div class="profile-honor-grid">
+            {{ range $p.Honors }}
+            <div class="profile-honor-item {{ if .IsMain }}main{{ else }}sub{{ end }}">
+                {{ if .HasArtwork }}
+                <div class="profile-honor-artwork">{{ .Artwork }}</div>
+                {{ end }}
+                <div class="profile-honor-title">{{ .Title }}</div>
+                <!-- <div class="profile-honor-subtitle">{{ .Slot }} · {{ .Subtitle }}</div> -->
+                <div class="profile-honor-meta">
+                    <span class="profile-honor-badge">{{ .Kind }}</span>
+                    {{ if .Rarity }}<span class="profile-honor-badge">稀有度 {{ .Rarity }}</span>{{ end }}
+                    {{ if gt .Level 0 }}<span class="profile-honor-badge">Lv.{{ .Level }}</span>{{ end }}
+                </div>
+                {{ if .Description }}
+                <div class="profile-honor-desc">{{ .Description }}</div>
+                {{ end }}
+            </div>
+            {{ end }}
+        </div>
+    </div>
+    {{ end }}
+
+    {{ if $p.DeckCards }}
+    <div class="profile-card">
+        <div class="label">主力卡组</div>
+        <div class="profile-deck-grid">
+            {{ range $p.DeckCards }}
+            {{ $card := . }}
+            <div class="profile-deck-card">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 156 156" style="width: 92px; height: 92px;">
+                    {{ if $card.Thumbnail }}<image href="{{ $card.Thumbnail }}" x="8" y="8" height="140" width="140">
+                    </image>{{ end }}
+                    {{ if $card.Frame }}<image href="{{ $card.Frame }}" x="0" y="0" height="156" width="156"></image>{{
+                    end }}
+                    {{ if $card.AttrIcon }}<image href="{{ $card.AttrIcon }}" x="1" y="1" width="35" height="35">
+                    </image>{{ end }}
+                    {{ range $card.Stars }}<image href="{{ $card.StarIcon }}" x="{{ . }}" y="118" width="28"
+                        height="28"></image>{{ end }}
+                </svg>
+                <div class="profile-deck-text">
+                    <strong>{{ $card.Prefix }}</strong>
+                    <div>{{ $card.CharacterName }}</div>
+                    <div>{{ $card.Rarity }} · {{ $card.Attr }}</div>
+                    <div>Lv.{{ $card.Level }}{{ if gt $card.MasterRank 0 }} · MR {{ $card.MasterRank }}{{ end }}</div>
+                    <div>{{ $card.ImageMode }}</div>
+                </div>
+            </div>
+            {{ end }}
+        </div>
+    </div>
+    {{ end }}
+
+    {{ if $p.HasPlayStats }}
+    <div class="profile-card">
+        <div class="label">打歌统计</div>
+        <div class="profile-play-grid">
+            <div></div>
+            {{ range $p.DifficultyColumns }}
+            <div class="profile-play-head" style="{{ .BackgroundStyle }}">{{ .Label }}</div>
+            {{ end }}
+
+            {{ range $row := $p.PlayStatsRows }}
+            <div class="profile-play-row-label">{{ $row.Label }}</div>
+            {{ range $cell := $row.Values }}
+            <div class="profile-play-cell" style="{{ $cell.Style }}">{{ $cell.Value }}</div>
+            {{ end }}
+            {{ end }}
+        </div>
+    </div>
+    {{ end }}
+
+    {{ if $p.HasTrainingSection }}
+    <div class="profile-card">
+        <div class="label">养成</div>
+        {{ if $p.HasRadarChart }}
+        <div class="profile-radar-wrap">{{ $p.RadarChart }}</div>
+        {{ end }}
+
+        {{ if $p.ChallengeLive.Available }}
+        <div class="profile-challenge-grid">
+            <div class="profile-challenge-item">
+                <div class="label">Challenge Live</div>
+                <div class="value">{{ $p.ChallengeLive.CharacterName }}</div>
+            </div>
+            <div class="profile-challenge-item">
+                <div class="label">最高阶段</div>
+                <div class="value">{{ if gt $p.ChallengeLive.StageRank 0 }}{{ $p.ChallengeLive.StageRank }}{{ else }}-{{
+                    end }}</div>
+            </div>
+            <div class="profile-challenge-item">
+                <div class="label">最高分</div>
+                <div class="value">{{ $p.ChallengeLive.HighScore }}</div>
+            </div>
+        </div>
+        {{ end }}
+    </div>
+    {{ end }}
+</div>
+{{ end }}
+{{ end }}
+
+{{ define "footer/extra" }}
+Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />
+{{ end }}
