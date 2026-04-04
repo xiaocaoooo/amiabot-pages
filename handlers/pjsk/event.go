@@ -72,7 +72,7 @@ var unitNames = map[string]string{
 }
 
 var serverNames = map[string]string{
-	"jp": "日服", "cn": "国服", "en": "国际服", "tw": "台服", "kr": "韩服",
+	"jp": "JP", "cn": "CN", "en": "EN", "tw": "TW", "kr": "KR",
 }
 
 var rarityNames = map[string]string{

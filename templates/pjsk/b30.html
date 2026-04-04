@@ -1,0 +1,97 @@
+{{ define "pjsk/b30" }}
+{{ template "layout/start" . }}
+{{ template "pjsk/b30/content" . }}
+{{ template "layout/end" . }}
+{{ end }}
+
+{{ define "pjsk/b30/content" }}
+{{ if .Error }}
+<div class="container error-container">
+    <div class="label">错误</div>
+    <div class="value">{{ .Error }}</div>
+</div>
+{{ else }}
+{{ $b := .B30 }}
+<style>
+    .b30-header { display: flex; flex-direction: column; gap: 4px; }
+    .b30-name { font-size: 20px; font-weight: 800; line-height: 1.3; word-break: break-word; }
+    .b30-sub { font-size: 13px; color: var(--color-on-surface-variant); }
+    .b30-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .b30-table thead th { padding: 6px 4px; text-align: center; border-bottom: 2px solid var(--color-outline-variant); font-size: 12px; font-weight: 700; color: var(--color-on-surface-variant); letter-spacing: 0.03em; vertical-align: middle; }
+    .b30-table thead th:nth-child(2) { text-align: left; }
+    .b30-table td { padding: 6px 4px; text-align: center; border-bottom: 1px solid rgba(129, 115, 123, 0.15); vertical-align: middle; }
+    .b30-table td:nth-child(2) { text-align: left; }
+    .b30-table td.order { font-weight: 700; color: var(--color-on-surface-variant); }
+    .b30-table td.song { font-weight: 600; color: var(--color-on-surface); }
+    .b30-table td.sid { font-size: 11px; color: var(--color-on-surface-variant); }
+    .b30-table td.cst { font-weight: 600; color: var(--color-on-surface-variant); }
+    .b30-diff { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 11px; font-weight: 700; color: #fff; line-height: 1.4; }
+    .b30-result-icon img { display: inline-block; height: 18px; width: auto; }
+    .b30-empty { padding: 32px 12px; text-align: center; color: var(--color-on-surface-variant); font-size: 14px; }
+    .b30-info { font-size: 12px; color: var(--color-on-surface-variant); line-height: 1.6; margin-top: 6px; }
+    .b30-cover { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; display: block; }
+    .b30-song-cell { display: flex; align-items: center; gap: 8px; }
+</style>
+
+<div class="container primary-container">
+    <div class="label">B30 成绩信息</div>
+    <div class="b30-header">
+        <div class="b30-name">{{ $b.Name }}</div>
+        <div class="b30-sub">[{{ $b.Server }}] {{ $b.UserID }}{{ if $b.UpdatedTime }} · {{ $b.UpdatedTime }}{{ end }}</div>
+    </div>
+</div>
+
+<div class="container secondary-container" style="margin-top: 8px;">
+    <div class="label">Rating</div>
+    <div class="value" style="font-size: 26px; font-weight: 800; color: var(--color-primary);">{{ $b.UserRating }}</div>
+</div>
+
+<div class="container" style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant); margin-top: 8px;">
+    <div class="label">成绩列表</div>
+    <div style="overflow-x: auto;">
+        <table class="b30-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>歌曲</th>
+                    <th>难度</th>
+                    <th>定数</th>
+                    <th>成绩</th>
+                </tr>
+            </thead>
+            <tbody>
+            {{ range $s := $b.Scores }}
+                <tr>
+                    <td class="order">{{ $s.Order }}</td>
+                    <td>
+                        <div class="b30-song-cell">
+                            {{ if $s.Cover }}
+                            <img class="b30-cover" src="{{ $s.Cover }}" />
+                            {{ end }}
+                            <div><div class="song">{{ $s.Name }}</div><div class="sid">{{ $s.SongID }}</div></div>
+                        </div>
+                    </td>
+                    <td><span class="b30-diff" style="{{ $s.DiffStyle }}">{{ $s.Diff }}</span></td>
+                    <td class="cst">{{ $s.Constant }}</td>
+                    <td class="b30-result-icon">{{ if $s.ResultIcon }}<img src="{{ $s.ResultIcon }}" />{{ end }}</td>
+                </tr>
+            {{ end }}
+            {{ if eq $b.Count 0 }}
+                <tr><td colspan="5" class="b30-empty">暂无 B30 成绩数据</td></tr>
+            {{ end }}
+            </tbody>
+        </table>
+    </div>
+    <div class="b30-info">
+        计算方式：33 级及以上 FC 定数 -1.0，33 级以下 FC 定数 -1.5，AP 不减（Clear 不计入）。<br />
+        仅供娱乐
+        {{ if $b.ChartUpdatedAt }}<br />定数更新于 {{ $b.ChartUpdatedAt }}。{{ end }}
+    </div>
+</div>
+
+{{ end }}
+{{ end }}
+
+{{ define "footer/extra" }}
+Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />
+{{ end }}

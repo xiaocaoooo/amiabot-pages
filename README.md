@@ -79,6 +79,7 @@ docker compose up -d --build
 | `SEKAI_ASSET` | `snowy,uni,haruki` | PJSK 图片资源源优先级。支持 `snowy` / `uni` / `haruki`，可用逗号配置多个，按顺序回退重试 |
 | `PJSK_PROFILE_BASEURL` | 空 | 可选。PJSK Profile 上游 API 基础地址，例如 `https://example.com/api`；`/pjsk/profile` 会请求 `{baseurl}/{server}/{id}/profile` |
 | `PJSK_PROFILE_HEADERS` | 空 / `{}` | 可选。PJSK Profile 上游请求头，格式为 JSON 对象字符串，例如 `{"x-moe-sekai-token":"<token>"}` 或 `{"Authorization":"Bearer <token>"}` |
+| `PJSK_SUITE_BASEURL` | 空 | 可选。PJSK Suite API 基础地址，例如 `https://suite-api.haruki.seiunx.com`；`/pjsk/b30` 会请求 `{baseurl}/public/{server}/suite/{id}` 获取玩家打歌成绩 |
 | `VALKEY_ADDR` | 空 | Valkey 地址（示例：`127.0.0.1:6379`）。为空时不启用 `param_id` 注入功能 |
 | `VALKEY_PASSWORD` | 空 | 可选。Valkey 密码 |
 | `VALKEY_DB` | `0` | 可选。Valkey DB 编号 |
@@ -285,6 +286,32 @@ PJSK_PROFILE_BASEURL=https://example.com/api
 PJSK_PROFILE_HEADERS={"x-moe-sekai-token":"<token>"}
 ```
 
+### PJSK B30
+
+- `GET /pjsk/b30`
+- 参数：
+  - `id`：玩家 ID（必填）
+  - `server`：服务器，支持 `jp/cn/en/tw/kr`（默认 `jp`）
+
+示例：
+
+```text
+/pjsk/b30?id=7486859250443000614&server=cn
+```
+
+说明：
+
+- 该页面展示玩家 Top 30 打歌成绩（按 rating 排序）
+- 需要通过 `PJSK_SUITE_BASEURL` 配置 Suite API 地址以获取打歌成绩
+- 可选通过 `PJSK_PROFILE_BASEURL` + `PJSK_PROFILE_HEADERS` 获取玩家昵称
+- 例如对接 Haruki Suite API + Moe-Sekai Profile API：
+
+```text
+PJSK_SUITE_BASEURL=https://suite-api.haruki.seiunx.com
+PJSK_PROFILE_BASEURL=https://seka-api.exmeaning.com/api
+PJSK_PROFILE_HEADERS={"x-moe-sekai-token":"<token>"}
+```
+
 ### PJSK MasterData 缓存接口
 
 - `GET /pjsk/masterdata/refresh`
@@ -338,6 +365,7 @@ PJSK_PROFILE_HEADERS={"x-moe-sekai-token":"<token>"}
 - 运行环境需能访问以下外部站点：
   - `api.github.com`
   - `sekai-world.github.io`
+  - `sekai-api.exmeaning.com`
   - `snowyassets.exmeaning.com`
   - `assets.unipjsk.com`
   - `sekai-assets-bdf29c81.seiunx.net`
