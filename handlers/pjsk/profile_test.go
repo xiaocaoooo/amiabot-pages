@@ -210,10 +210,25 @@ func TestProfileHandlerRequestsUpstreamAndRendersLunaStyleData(t *testing.T) {
 	}
 
 	body := w.Body.String()
-	for _, want := range []string{"测试玩家", "123", "80", "日服", "一歌ファン", "36", "星乃 一歌", "57", "345678", "你好世界", "test_user"} {
+	for _, want := range []string{"测试玩家", "80", "JP", "一歌ファン", "36", "星乃 一歌", "57", "345678", "你好世界", "test_user"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("response body missing %q: %s", want, body)
 		}
+	}
+	if strings.Contains(body, "123") {
+		t.Fatalf("response body leaked user id: %s", body)
+	}
+}
+
+func TestBuildPJSKProfilePageDataFallbackNameDoesNotLeakUserID(t *testing.T) {
+	page := buildPJSKProfilePageData("jp", &pjskRemoteProfile{
+		User: pjskProfileUser{
+			UserID: json.Number("123456"),
+		},
+	})
+
+	if page.Name != "玩家" {
+		t.Fatalf("unexpected fallback name: %q", page.Name)
 	}
 }
 
@@ -257,8 +272,12 @@ func TestProfileHandlerInvalidID(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("unexpected status: got=%d body=%s", w.Code, w.Body.String())
 	}
-	if !strings.Contains(w.Body.String(), "无效的玩家 ID: abc") {
-		t.Fatalf("unexpected body: %s", w.Body.String())
+	body := w.Body.String()
+	if !strings.Contains(body, "无效的玩家 ID") {
+		t.Fatalf("unexpected body: %s", body)
+	}
+	if strings.Contains(body, "abc") {
+		t.Fatalf("response body leaked invalid id: %s", body)
 	}
 }
 
@@ -279,7 +298,7 @@ func TestProfileHandlerInvalidServer(t *testing.T) {
 func newProfileTestRouter(t *testing.T) *gin.Engine {
 	t.Helper()
 
-	tpl := htmltemplate.Must(htmltemplate.New("profile-test").Parse(`{{define "pjsk/profile"}}{{if .Error}}{{.Error}}{{else}}{{.Profile.Name}}|{{.Profile.UserID}}|{{.Profile.Rank}}|{{.Profile.Server}}|{{len .Profile.Honors}}|{{if .Profile.Honors}}{{(index .Profile.Honors 0).Title}}|{{(index .Profile.Honors 0).HasArtwork}}{{end}}|{{len .Profile.CharacterRanks}}|{{if .Profile.ChallengeLive.Available}}{{.Profile.ChallengeLive.CharacterName}}|{{.Profile.ChallengeLive.StageRank}}|{{.Profile.ChallengeLive.HighScore}}{{end}}|{{.Profile.Word}}|{{.Profile.TwitterID}}{{end}}{{end}}`))
+	tpl := htmltemplate.Must(htmltemplate.New("profile-test").Parse(`{{define "pjsk/profile"}}{{if .Error}}{{.Error}}{{else}}{{.Profile.Name}}|{{.Profile.Rank}}|{{.Profile.Server}}|{{len .Profile.Honors}}|{{if .Profile.Honors}}{{(index .Profile.Honors 0).Title}}|{{(index .Profile.Honors 0).HasArtwork}}{{end}}|{{len .Profile.CharacterRanks}}|{{if .Profile.ChallengeLive.Available}}{{.Profile.ChallengeLive.CharacterName}}|{{.Profile.ChallengeLive.StageRank}}|{{.Profile.ChallengeLive.HighScore}}{{end}}|{{.Profile.Word}}|{{.Profile.TwitterID}}{{end}}{{end}}`))
 	r := gin.New()
 	r.SetHTMLTemplate(tpl)
 	r.GET("/pjsk/profile", ProfileHandler)

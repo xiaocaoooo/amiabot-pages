@@ -28,13 +28,13 @@ var (
 
 // suiteMusicResult 来自 suite-api userMusicResults 的单条记录
 type suiteMusicResult struct {
-	MusicID        int    `json:"musicId"`
+	MusicID         int    `json:"musicId"`
 	MusicDifficulty string `json:"musicDifficultyType"`
-	HighScore      int64  `json:"highScore"`
-	PlayResult     string `json:"playResult"`
-	FullComboFlg   bool   `json:"fullComboFlg"`
-	FullPerfectFlg bool   `json:"fullPerfectFlg"`
-	PlayType       string `json:"playType"`
+	HighScore       int64  `json:"highScore"`
+	PlayResult      string `json:"playResult"`
+	FullComboFlg    bool   `json:"fullComboFlg"`
+	FullPerfectFlg  bool   `json:"fullPerfectFlg"`
+	PlayType        string `json:"playType"`
 }
 
 // B30ChartEntry 歌曲难度 Constant 数据
@@ -62,7 +62,6 @@ type B30ScoreEntry struct {
 // B30PageData 传递给模板的数据
 type B30PageData struct {
 	Name           string
-	UserID         string
 	Server         string
 	ServerKey      string
 	UserRating     string
@@ -345,12 +344,7 @@ func fetchSuiteMusicResults(suiteBaseURL, server, userID string) ([]suiteMusicRe
 		}
 	}
 	if name == "" {
-		userIDStr := suiteData.UserProfile.UserId.String()
-		if userIDStr != "" {
-			name = "玩家 " + userIDStr
-		} else {
-			name = "玩家 " + userID
-		}
+		name = "玩家"
 	}
 
 	var uploadTime string
@@ -427,7 +421,7 @@ func B30Handler(c *gin.Context) {
 		return
 	}
 	if !isDigits(userID) {
-		renderB30Err(c, "无效的玩家 ID: "+userID)
+		renderB30Err(c, "无效的玩家 ID")
 		return
 	}
 
@@ -448,7 +442,7 @@ func B30Handler(c *gin.Context) {
 	// 2. 获取音乐成绩
 	musicResults, name, uploadTime, err := fetchSuiteMusicResults(suiteBaseURL, server, userID)
 	if err != nil {
-		renderB30Err(c, err.Error())
+		renderB30Err(c, sanitizePJSKPageError(err.Error(), userID))
 		return
 	}
 
@@ -571,7 +565,6 @@ func B30Handler(c *gin.Context) {
 
 	page := B30PageData{
 		Name:           name,
-		UserID:         userID,
 		Server:         serverName,
 		ServerKey:      server,
 		UserRating:     formatB30(sumRating / 30.0),

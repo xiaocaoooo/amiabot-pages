@@ -189,7 +189,6 @@ type pjskProfileChallengeLiveView struct {
 
 type pjskProfilePageData struct {
 	Name               string
-	UserID             string
 	Rank               int
 	Server             string
 	Word               string
@@ -242,15 +241,14 @@ type pjskBondsHonorLevel struct {
 }
 
 type pjskBondsHonor struct {
-	ID                    int                   `json:"id"`
-	Name                  string                `json:"name"`
-	HonorRarity           string                `json:"honorRarity"`
-	GameCharacterUnitID1  int                   `json:"gameCharacterUnitId1"`
-	GameCharacterUnitID2  int                   `json:"gameCharacterUnitId2"`
-	Levels                []pjskBondsHonorLevel `json:"levels"`
-	ConfigurableUnitVirtualSinger bool `json:"configurableUnitVirtualSinger"`
+	ID                            int                   `json:"id"`
+	Name                          string                `json:"name"`
+	HonorRarity                   string                `json:"honorRarity"`
+	GameCharacterUnitID1          int                   `json:"gameCharacterUnitId1"`
+	GameCharacterUnitID2          int                   `json:"gameCharacterUnitId2"`
+	Levels                        []pjskBondsHonorLevel `json:"levels"`
+	ConfigurableUnitVirtualSinger bool                  `json:"configurableUnitVirtualSinger"`
 }
-
 
 type pjskBondsHonorWord struct {
 	ID              int    `json:"id"`
@@ -327,6 +325,17 @@ func renderProfileError(c *gin.Context, errMsg string) {
 	c.HTML(http.StatusOK, "pjsk/profile", gin.H{"Error": errMsg})
 }
 
+func sanitizePJSKPageError(errMsg, userID string) string {
+	errMsg = strings.TrimSpace(errMsg)
+	if errMsg == "" {
+		return "请求失败"
+	}
+	if userID == "" {
+		return errMsg
+	}
+	return strings.ReplaceAll(errMsg, userID, "[已隐藏]")
+}
+
 // ProfileRawHandler 返回 Profile 原始获取的数据（供插件调用）
 func ProfileRawHandler(c *gin.Context) {
 	server := c.DefaultQuery("server", "jp")
@@ -373,19 +382,19 @@ func ProfileHandler(c *gin.Context) {
 		return
 	}
 	if !isDigits(userID) {
-		renderProfileError(c, "无效的玩家 ID: "+userID)
+		renderProfileError(c, "无效的玩家 ID")
 		return
 	}
 
 	cfg, err := loadPJSKProfileAPIConfigFromEnv()
 	if err != nil {
-		renderProfileError(c, err.Error())
+		renderProfileError(c, sanitizePJSKPageError(err.Error(), userID))
 		return
 	}
 
 	profile, err := fetchRemotePJSKProfile(cfg, server, userID)
 	if err != nil {
-		renderProfileError(c, err.Error())
+		renderProfileError(c, sanitizePJSKPageError(err.Error(), userID))
 		return
 	}
 
@@ -449,10 +458,9 @@ func shortenProfileErrorBody(body []byte) string {
 }
 
 func buildPJSKProfilePageData(server string, profile *pjskRemoteProfile) pjskProfilePageData {
-	userID := strings.TrimSpace(profile.User.UserID.String())
 	name := strings.TrimSpace(profile.User.Name)
 	if name == "" {
-		name = "玩家 " + userID
+		name = "玩家"
 	}
 
 	serverName := serverNames[server]
@@ -469,7 +477,6 @@ func buildPJSKProfilePageData(server string, profile *pjskRemoteProfile) pjskPro
 
 	page := pjskProfilePageData{
 		Name:               name,
-		UserID:             userID,
 		Rank:               profile.User.Rank,
 		Server:             serverName,
 		Word:               sanitizePJSKProfileWord(profile.UserProfile.Word),
@@ -926,11 +933,11 @@ func buildPJSKProfileHonorView(honor pjskProfileHonor, lookup *pjskHonorLookup) 
 	}
 
 	view := &pjskProfileHonorView{
-		Slot:    humanizePJSKProfileHonorSlot(seq),
-		Level:   honor.HonorLevel,
-		IsMain:  seq == 1,
-		Width:   0,
-		Height:  0,
+		Slot:   humanizePJSKProfileHonorSlot(seq),
+		Level:  honor.HonorLevel,
+		IsMain: seq == 1,
+		Width:  0,
+		Height: 0,
 	}
 
 	if honor.ProfileHonorType == "bonds" {
@@ -1026,10 +1033,10 @@ func loadPJSKHonorLookup(server string) (*pjskHonorLookup, error) {
 	}
 
 	lookup := &pjskHonorLookup{
-		Honors:            make(map[int]pjskHonor, len(honors)),
-		Groups:            make(map[int]pjskHonorGroup, len(groups)),
-		Bonds:             make(map[int]pjskBondsHonor, len(bonds)),
-		BondWords:         make(map[int]pjskBondsHonorWord, len(bondWords)),
+		Honors:             make(map[int]pjskHonor, len(honors)),
+		Groups:             make(map[int]pjskHonorGroup, len(groups)),
+		Bonds:              make(map[int]pjskBondsHonor, len(bonds)),
+		BondWords:          make(map[int]pjskBondsHonorWord, len(bondWords)),
 		GameCharacterUnits: make(map[int]pjskGameCharacterUnit, len(gameCharacterUnits)),
 	}
 	for _, honor := range honors {
@@ -1089,7 +1096,7 @@ func loadPJSKBondsHonorWords(server string) ([]pjskBondsHonorWord, error) {
 		}
 		result = append(result, word)
 	}
- return result, nil
+	return result, nil
 }
 
 func readCachedJSONInto(server, file string, target any) error {
