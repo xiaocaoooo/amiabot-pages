@@ -327,6 +327,39 @@ func renderProfileError(c *gin.Context, errMsg string) {
 	c.HTML(http.StatusOK, "pjsk/profile", gin.H{"Error": errMsg})
 }
 
+// ProfileRawHandler 返回 Profile 原始获取的数据（供插件调用）
+func ProfileRawHandler(c *gin.Context) {
+	server := c.DefaultQuery("server", "jp")
+	if !validServers[server] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的服务器参数，支持: jp, cn, en, tw, kr"})
+		return
+	}
+
+	userID := strings.TrimSpace(c.Query("id"))
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少玩家 ID 参数"})
+		return
+	}
+	if !isDigits(userID) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的玩家 ID: " + userID})
+		return
+	}
+
+	cfg, err := loadPJSKProfileAPIConfigFromEnv()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	profile, err := fetchRemotePJSKProfile(cfg, server, userID)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, profile)
+}
+
 func ProfileHandler(c *gin.Context) {
 	server := c.DefaultQuery("server", "jp")
 	if !validServers[server] {

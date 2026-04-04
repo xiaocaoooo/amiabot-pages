@@ -6,6 +6,8 @@ amiabot-pages
 *.log
 *.out
 
+cache/
+
 Dockerfile*
 docker-compose*.yml
 README.md

@@ -66,6 +66,7 @@ func main() {
 		pjskGroup.GET("/card", pjsk.CardHandler)
 		pjskGroup.GET("/music", pjsk.MusicHandler)
 		pjskGroup.GET("/profile", pjsk.ProfileHandler)
+		pjskGroup.GET("/profile/raw", pjsk.ProfileRawHandler)
 		pjskGroup.GET("/masterdata/*path", pjsk.MasterDataHandler)
 		pjskGroup.GET("/assets/:label", pjsk.AssetBinaryHandler)
 	}

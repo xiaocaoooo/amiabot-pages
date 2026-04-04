@@ -271,17 +271,23 @@ func refreshServer(server string, maxConcurrency int, force bool) map[string]str
 	close(ch)
 
 	results := make(map[string]string, len(files))
+	hasError := false
 	for r := range ch {
 		if r.err != nil {
 			results[r.file] = r.err.Error()
+			hasError = true
 		} else {
 			results[r.file] = "ok"
 		}
 	}
 
-	// 下载完成后保存新的 commit SHA
-	saveSHA(server, remoteSHA)
-	results["_commit"] = remoteSHA
+	// 仅当所有文件都下载成功时才保存新的 commit SHA
+	if hasError {
+		results["_commit"] = "not_saved (存在下载失败的文件)"
+	} else {
+		saveSHA(server, remoteSHA)
+		results["_commit"] = remoteSHA
+	}
 
 	return results
 }
