@@ -540,7 +540,7 @@ func B30Handler(c *gin.Context) {
 	for i, s := range scored {
 		resultIcon := pjskB30ResultIcon(s.resultStr)
 
-		constantText := strconv.FormatFloat(s.constant, 'f', -1, 64)
+		constantText := strconv.FormatFloat(s.constant, 'f', 1, 64)
 
 		var cover htmltemplate.URL
 		var songName string
