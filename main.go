@@ -10,6 +10,7 @@ import (
 	"github.com/xiaocaoooo/amiabot-pages/handlers/bilibili"
 	"github.com/xiaocaoooo/amiabot-pages/handlers/pixiv"
 	"github.com/xiaocaoooo/amiabot-pages/handlers/pjsk"
+	"github.com/xiaocaoooo/amiabot-pages/handlers/query"
 	"github.com/xiaocaoooo/amiabot-pages/handlers/status"
 	"github.com/xiaocaoooo/amiabot-pages/pkg/imgcache"
 	"github.com/xiaocaoooo/amiabot-pages/pkg/paramid"
@@ -45,6 +46,8 @@ func main() {
 		"templates/pjsk/music.html",
 		"templates/pjsk/profile.html",
 		"templates/pjsk/b30.html",
+		"templates/query/user.html",
+		"templates/query/group.html",
 		"templates/status/zeabur.html",
 	)
 	bilibiliGroup := r.Group("/bilibili", groupMiddlewares...)
@@ -71,6 +74,12 @@ func main() {
 		pjskGroup.GET("/b30", pjsk.B30Handler)
 		pjskGroup.GET("/masterdata/*path", pjsk.MasterDataHandler)
 		pjskGroup.GET("/assets/:label", pjsk.AssetBinaryHandler)
+	}
+
+	queryGroup := r.Group("/query", groupMiddlewares...)
+	{
+		queryGroup.GET("/user", query.UserHandler)
+		queryGroup.GET("/group", query.GroupHandler)
 	}
 
 	pjsk.InitMasterData()
