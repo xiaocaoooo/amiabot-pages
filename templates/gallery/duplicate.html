@@ -1,0 +1,129 @@
+{{ define "gallery/duplicate" }}
+{{ template "layout/start" . }}
+<style>
+    .duplicate-page {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .duplicate-headline {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-bottom: 14px;
+        border-bottom: 2px solid var(--color-outline-variant);
+    }
+
+    .duplicate-title {
+        font-size: 30px;
+        font-weight: 900;
+        color: var(--color-on-surface);
+    }
+
+    .duplicate-subtitle {
+        font-size: 16px;
+        color: var(--color-primary);
+        font-weight: 700;
+    }
+
+    .duplicate-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+    }
+
+    .duplicate-card {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px;
+        border-radius: 18px;
+        background: var(--color-surface-container-low);
+        border: 1px solid var(--color-outline-variant);
+    }
+
+    .duplicate-card-title {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--color-on-surface);
+    }
+
+    .duplicate-image-shell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 260px;
+        border-radius: 14px;
+        overflow: hidden;
+        background: linear-gradient(135deg, var(--color-primary-container), var(--color-secondary-container));
+    }
+
+    .duplicate-image-shell img {
+        display: block;
+        max-width: 100%;
+        max-height: 420px;
+        object-fit: contain;
+    }
+
+    .duplicate-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .duplicate-tag {
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--color-secondary-container);
+        color: var(--color-on-secondary-container);
+        font-size: 12px;
+        font-weight: 700;
+    }
+</style>
+{{ if .Error }}
+<div class="container error-container">
+    <div class="label">错误</div>
+    <div class="value">{{ .Error }}</div>
+</div>
+{{ else }}
+{{ $d := .Duplicate }}
+<div class="duplicate-page">
+    <section class="duplicate-headline">
+        <div class="duplicate-title">检测到重复上传</div>
+        <div class="duplicate-subtitle">这张图片已存在于图库中，已收录图片 ID：#{{ $d.DuplicateID }}</div>
+    </section>
+
+    <section class="duplicate-grid">
+        <article class="duplicate-card">
+            <div class="duplicate-card-title">本次上传图片</div>
+            <div class="duplicate-image-shell">
+                <img src="{{ $d.CurrentImage }}" alt="本次上传图片">
+            </div>
+            {{ if $d.CurrentTags }}
+            <div class="duplicate-tags">
+                {{ range $d.CurrentTags }}
+                <span class="duplicate-tag">{{ . }}</span>
+                {{ end }}
+            </div>
+            {{ end }}
+        </article>
+
+        <article class="duplicate-card">
+            <div class="duplicate-card-title">图库中已收录的图片</div>
+            <div class="duplicate-image-shell">
+                <img src="{{ $d.ExistingImage }}" alt="图库中已收录的图片">
+            </div>
+            {{ if $d.ExistingTags }}
+            <div class="duplicate-tags">
+                {{ range $d.ExistingTags }}
+                <span class="duplicate-tag">{{ . }}</span>
+                {{ end }}
+            </div>
+            {{ end }}
+        </article>
+    </section>
+</div>
+{{ end }}
+{{ template "layout/end" . }}
+{{ end }}

@@ -4,10 +4,12 @@ FROM golang:1.25-alpine AS builder
 WORKDIR /app
 
 COPY go.mod go.sum ./
-RUN go mod download
+RUN unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy \
+    && go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/amiabot-pages .
+RUN unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy \
+    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/amiabot-pages .
 
 FROM alpine:3.20
 WORKDIR /app

@@ -1,0 +1,149 @@
+{{ define "gallery/images" }}
+{{ template "layout/start" . }}
+<style>
+    .gallery-page {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .gallery-headline {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-bottom: 14px;
+        border-bottom: 2px solid var(--color-outline-variant);
+    }
+
+    .gallery-title {
+        font-size: 30px;
+        font-weight: 900;
+        color: var(--color-on-surface);
+        word-break: break-word;
+    }
+
+    .gallery-subtitle {
+        font-size: 15px;
+        color: var(--color-primary);
+        font-weight: 700;
+        word-break: break-word;
+    }
+
+    .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .gallery-card {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px;
+        border-radius: 18px;
+        background: var(--color-surface-container-low);
+        border: 1px solid var(--color-outline-variant);
+    }
+
+    .gallery-thumb {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 180px;
+        border-radius: 14px;
+        overflow: hidden;
+        background: linear-gradient(135deg, var(--color-primary-container), var(--color-secondary-container));
+    }
+
+    .gallery-thumb img {
+        display: block;
+        width: 100%;
+        height: 220px;
+        object-fit: cover;
+    }
+
+    .gallery-empty-thumb {
+        font-size: 14px;
+        color: var(--color-on-surface-variant);
+        font-weight: 700;
+    }
+
+    .gallery-card-title {
+        font-size: 20px;
+        font-weight: 900;
+        color: var(--color-on-surface);
+    }
+
+    .gallery-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .gallery-chip {
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--color-secondary-container);
+        color: var(--color-on-secondary-container);
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .gallery-empty-state {
+        padding: 28px;
+        border-radius: 18px;
+        background: var(--color-surface-container-low);
+        border: 1px solid var(--color-outline-variant);
+        color: var(--color-on-surface-variant);
+        text-align: center;
+        font-weight: 700;
+    }
+</style>
+{{ if .Error }}
+<div class="container error-container">
+    <div class="label">错误</div>
+    <div class="value">{{ .Error }}</div>
+</div>
+{{ else }}
+{{ $p := .ImagesPage }}
+<div class="gallery-page">
+    <section class="gallery-headline">
+        <div class="gallery-title">标签图片列表：{{ range $index, $tag := $p.QueryTags }}{{ if $index }}、{{ end }}#{{ $tag }}{{ end }}</div>
+        <div class="gallery-subtitle">共 {{ $p.Total }} 张图片</div>
+    </section>
+
+    {{ if $p.Items }}
+    <section class="gallery-grid">
+        {{ range $p.Items }}
+        <article class="gallery-card">
+            <div class="gallery-thumb">
+                {{ if .HasPreview }}
+                <img src="{{ .Preview }}" alt="图片 #{{ .ID }}">
+                {{ else }}
+                <div class="gallery-empty-thumb">预览不可用</div>
+                {{ end }}
+            </div>
+            <div class="gallery-card-title">图片 #{{ .ID }}</div>
+            <div class="gallery-meta">
+                <span class="gallery-chip">{{ .Dimensions }}</span>
+                {{ if .CreatedAt }}
+                <span class="gallery-chip">{{ .CreatedAt }}</span>
+                {{ end }}
+            </div>
+            {{ if .Tags }}
+            <div class="gallery-meta">
+                {{ range .Tags }}
+                <span class="gallery-chip">#{{ . }}</span>
+                {{ end }}
+            </div>
+            {{ end }}
+        </article>
+        {{ end }}
+    </section>
+    {{ else }}
+    <div class="gallery-empty-state">当前标签下还没有图片</div>
+    {{ end }}
+</div>
+{{ end }}
+{{ template "layout/end" . }}
+{{ end }}

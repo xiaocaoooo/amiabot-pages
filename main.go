@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/xiaocaoooo/amiabot-pages/handlers/bilibili"
+	"github.com/xiaocaoooo/amiabot-pages/handlers/gallery"
 	"github.com/xiaocaoooo/amiabot-pages/handlers/pixiv"
 	"github.com/xiaocaoooo/amiabot-pages/handlers/pjsk"
 	"github.com/xiaocaoooo/amiabot-pages/handlers/query"
@@ -40,6 +41,9 @@ func main() {
 		"templates/layout.html",
 		"templates/logo.html",
 		"templates/bilibili/video.html",
+		"templates/gallery/duplicate.html",
+		"templates/gallery/tags.html",
+		"templates/gallery/images.html",
 		"templates/pixiv/illust.html",
 		"templates/pjsk/event.html",
 		"templates/pjsk/card.html",
@@ -53,6 +57,13 @@ func main() {
 	bilibiliGroup := r.Group("/bilibili", groupMiddlewares...)
 	{
 		bilibiliGroup.GET("/video", bilibili.VideoHandler)
+	}
+
+	galleryGroup := r.Group("/gallery", groupMiddlewares...)
+	{
+		galleryGroup.GET("/duplicate", gallery.DuplicateHandler)
+		galleryGroup.GET("/tags", gallery.TagsHandler)
+		galleryGroup.GET("/images", gallery.ImagesHandler)
 	}
 
 	pixivGroup := r.Group("/pixiv", groupMiddlewares...)

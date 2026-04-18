@@ -1,0 +1,141 @@
+{{ define "gallery/tags" }}
+{{ template "layout/start" . }}
+<style>
+    .gallery-page {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .gallery-headline {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-bottom: 14px;
+        border-bottom: 2px solid var(--color-outline-variant);
+    }
+
+    .gallery-title {
+        font-size: 30px;
+        font-weight: 900;
+        color: var(--color-on-surface);
+    }
+
+    .gallery-subtitle {
+        font-size: 15px;
+        color: var(--color-primary);
+        font-weight: 700;
+    }
+
+    .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .gallery-card {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px;
+        border-radius: 18px;
+        background: var(--color-surface-container-low);
+        border: 1px solid var(--color-outline-variant);
+    }
+
+    .gallery-thumb {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 160px;
+        border-radius: 14px;
+        overflow: hidden;
+        background: linear-gradient(135deg, var(--color-primary-container), var(--color-secondary-container));
+    }
+
+    .gallery-thumb img {
+        display: block;
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+    }
+
+    .gallery-empty-thumb {
+        font-size: 14px;
+        color: var(--color-on-surface-variant);
+        font-weight: 700;
+    }
+
+    .gallery-tag-name {
+        font-size: 20px;
+        font-weight: 900;
+        color: var(--color-on-surface);
+        word-break: break-word;
+    }
+
+    .gallery-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .gallery-chip {
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--color-secondary-container);
+        color: var(--color-on-secondary-container);
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .gallery-empty-state {
+        padding: 28px;
+        border-radius: 18px;
+        background: var(--color-surface-container-low);
+        border: 1px solid var(--color-outline-variant);
+        color: var(--color-on-surface-variant);
+        text-align: center;
+        font-weight: 700;
+    }
+</style>
+{{ if .Error }}
+<div class="container error-container">
+    <div class="label">错误</div>
+    <div class="value">{{ .Error }}</div>
+</div>
+{{ else }}
+{{ $p := .TagsPage }}
+<div class="gallery-page">
+    <section class="gallery-headline">
+        <div class="gallery-title">图库标签总览</div>
+        <div class="gallery-subtitle">共 {{ $p.TotalTags }} 个标签，每个标签展示第一张图与图片数量</div>
+    </section>
+
+    {{ if $p.Items }}
+    <section class="gallery-grid">
+        {{ range $p.Items }}
+        <article class="gallery-card">
+            <div class="gallery-thumb">
+                {{ if .HasPreview }}
+                <img src="{{ .Preview }}" alt="{{ .Name }}">
+                {{ else }}
+                <div class="gallery-empty-thumb">暂无图片</div>
+                {{ end }}
+            </div>
+            <div class="gallery-tag-name">#{{ .Name }}</div>
+            <div class="gallery-meta">
+                <span class="gallery-chip">{{ .Count }} 张图片</span>
+                {{ if gt .FirstImageID 0 }}
+                <span class="gallery-chip">首图 #{{ .FirstImageID }}</span>
+                {{ end }}
+            </div>
+        </article>
+        {{ end }}
+    </section>
+    {{ else }}
+    <div class="gallery-empty-state">当前图库还没有任何标签</div>
+    {{ end }}
+</div>
+{{ end }}
+{{ template "layout/end" . }}
+{{ end }}
