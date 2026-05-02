@@ -64,14 +64,14 @@
 
         body {
             font-family: "Noto Sans CJK SC", "Source Han Sans SC", system-ui, sans-serif;
-            background-color: var(--color-surface);
+            /*background-color: var(--color-surface);*/
             display: flex;
             justify-content: center;
             align-items: flex-start;
         }
 
         #screenshot-wrapper {
-            padding: 20px;
+            padding: 4rem;
             display: flex;
             justify-content: center;
         }
@@ -82,7 +82,7 @@
             min-width: 500px;
             max-width: 900px;
             /* 確保截圖時邊緣留白以容納陰影 */
-            background-color: var(--color-primary-container);
+            background-color: transparent;
             border-radius: var(--radius-lg);
             overflow: hidden;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -106,7 +106,7 @@
         #content {
             margin: var(--space-lg);
             padding: var(--space-md);
-            background-color: var(--color-surface);
+            background-color: transparent;
             color: var(--color-on-surface);
             border-radius: var(--radius-md);
             line-height: 1.6;
