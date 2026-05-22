@@ -193,6 +193,10 @@ func applyPixivCommonHeaders(req *http.Request) {
 }
 
 func pixivImageHeaders() map[string]string {
+	// 简单的 map 在 HTTP 库中通常可以工作，但为了确定性，
+	// 如果业务逻辑对此 map 进行了迭代操作，这里建议使用 slice 存储结构体。
+	// 这里暂且保持 map，因为它是为了被传递给可能使用 map 的 HTTP 函数。
+	// 如果后续有需求，可以修改为 slice。
 	return map[string]string{
 		"Referer":    "https://app-api.pixiv.net/",
 		"User-Agent": pixivImageAgent,
