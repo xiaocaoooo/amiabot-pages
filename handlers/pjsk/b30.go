@@ -69,6 +69,7 @@ type B30PageData struct {
 	Scores         []B30ScoreEntry
 	ChartUpdatedAt string
 	UpdatedTime    string
+	FooterExtra    string
 }
 
 const b30ChartURL = "https://raw.githubusercontent.com/moe-sekai/MoeSekai-Hub/main/data/pjskb30/merged_chart.csv"
@@ -572,6 +573,7 @@ func B30Handler(c *gin.Context) {
 		Scores:         views,
 		ChartUpdatedAt: b30ChartUpdateText(),
 		UpdatedTime:    uploadTime,
+		FooterExtra:    "Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />",
 	}
 
 	c.HTML(http.StatusOK, "pjsk/b30", gin.H{"B30": page})

@@ -34,6 +34,7 @@ type cardDetail struct {
 	ReleaseAt     string
 	Server        string
 	ServerKey     string
+	FooterExtra   string
 
 	Thumbnail htmltemplate.URL
 	Frame     htmltemplate.URL
@@ -163,6 +164,7 @@ func CardHandler(c *gin.Context) {
 		ReleaseAt:     formatMillisTime(card.ReleaseAt),
 		Server:        serverNames[server],
 		ServerKey:     server,
+		FooterExtra:   "Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />",
 		Thumbnail:     thumb,
 		CardImage:     cardImage,
 		Frame:         frameDataURLs[rarity],

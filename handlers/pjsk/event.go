@@ -419,6 +419,7 @@ func EventHandler(c *gin.Context) {
 		"Status":      eventStatus(target.StartAt, target.ClosedAt),
 		"Progress":    fmt.Sprintf("%.1f", eventProgress(target.StartAt, target.ClosedAt)),
 		"Cards":       cards,
+		"FooterExtra": "Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />",
 	})
 }
 

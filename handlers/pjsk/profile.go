@@ -208,6 +208,7 @@ type pjskProfilePageData struct {
 	HasRadarChart      bool
 	ChallengeLive      pjskProfileChallengeLiveView
 	HasTrainingSection bool
+	FooterExtra        string
 }
 
 type pjskHonorLevel struct {
@@ -494,6 +495,7 @@ func buildPJSKProfilePageData(server string, profile *pjskRemoteProfile) pjskPro
 		HasRadarChart:      radarChart != "",
 		ChallengeLive:      challengeLive,
 		HasTrainingSection: radarChart != "" || challengeLive.Available,
+		FooterExtra:        "Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />",
 	}
 	if len(deckCards) > 0 {
 		page.HasLeaderCard = true

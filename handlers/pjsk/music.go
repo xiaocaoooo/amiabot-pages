@@ -67,6 +67,7 @@ type musicDetail struct {
 	Vocalists    []vocalInfo
 	Difficulties []difficultyInfo
 	Events       []eventInfo
+	FooterExtra  string
 }
 
 type vocalInfo struct {
@@ -139,6 +140,7 @@ func MusicHandler(c *gin.Context) {
 		Vocalists:    vocalists,
 		Difficulties: difficulties,
 		Events:       events,
+		FooterExtra:  "Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />",
 	}
 
 	c.HTML(http.StatusOK, "pjsk/music", gin.H{"Music": d})
