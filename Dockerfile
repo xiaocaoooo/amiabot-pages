@@ -3,29 +3,35 @@
 # --- Build Stage ---
 FROM rust:1.97.1-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static
+# musl/openssl for linking; curl/ca-certificates for utoipa-swagger-ui download
+RUN apk add --no-cache \
+    musl-dev \
+    openssl-dev \
+    openssl-libs-static \
+    pkgconf \
+    curl \
+    ca-certificates
 
 WORKDIR /app
 
-# Cargo uses git or network sometimes, clear proxy in builder if required
-RUN unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy
+# Prefer static OpenSSL on musl
+ENV OPENSSL_STATIC=1 \
+    OPENSSL_NO_VENDOR=1
 
 # Copy Cargo files for dependency caching
 COPY Cargo.toml Cargo.lock ./
 
 # Create dummy src/main.rs to build dependencies and cache them
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release
-RUN rm -rf src
+RUN mkdir src && echo "fn main() {}" > src/main.rs \
+    && cargo build --release \
+    && rm -rf src
 
 # Copy actual source code and templates
 COPY src ./src
 COPY templates ./templates
 
-# Build the actual application
-# We need static linking for static openssl / musl, which is standard in alpine
-RUN cargo build --release
+# Ensure the package itself is rebuilt after replacing sources
+RUN touch src/main.rs && cargo build --release
 
 # --- Runtime Stage ---
 FROM alpine:3.20
