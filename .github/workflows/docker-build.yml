@@ -2,7 +2,7 @@ name: Push to Main
 
 on:
   push:
-    branches: [main]
+    branches: [hana]
 
 jobs:
   build-and-check:
