@@ -1,26 +1,49 @@
 # syntax=docker/dockerfile:1.7
 
-FROM golang:1.25-alpine AS builder
+# --- Build Stage ---
+FROM rust:1.97.1-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static
+
 WORKDIR /app
 
-COPY go.mod go.sum ./
-RUN unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy \
-    && go mod download
+# Cargo uses git or network sometimes, clear proxy in builder if required
+RUN unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy
 
-COPY . .
-RUN unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy \
-    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/amiabot-pages .
+# Copy Cargo files for dependency caching
+COPY Cargo.toml Cargo.lock ./
 
+# Create dummy src/main.rs to build dependencies and cache them
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+RUN cargo build --release
+RUN rm -rf src
+
+# Copy actual source code and templates
+COPY src ./src
+COPY templates ./templates
+
+# Build the actual application
+# We need static linking for static openssl / musl, which is standard in alpine
+RUN cargo build --release
+
+# --- Runtime Stage ---
 FROM alpine:3.20
+
 WORKDIR /app
 
-RUN apk add --no-cache ca-certificates wget && adduser -D -u 10001 appuser
+# Install runtime dependencies and setup non-root user
+RUN apk add --no-cache ca-certificates wget libgcc && adduser -D -u 10001 appuser
 
-COPY --from=builder /out/amiabot-pages /app/amiabot-pages
+# Copy built binary from builder
+COPY --from=builder /app/target/release/amiabot-pages /app/amiabot-pages
 
-COPY --from=builder /app/templates /app/templates
+# Copy templates and static assets
+COPY templates /app/templates
+COPY static /app/static
 
-RUN mkdir -p /app/cache && chown appuser:appuser /app/cache
+# Prepare cache directories and setup permissions
+RUN mkdir -p /app/cache/images /app/cache/pjsk && chown -R appuser:appuser /app/cache
 
 ENV PORT=8080
 EXPOSE 8080

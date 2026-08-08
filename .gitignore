@@ -3,3 +3,8 @@ old/
 .worktrees/
 cache/
 # static
+
+
+# Added by cargo
+
+/target
