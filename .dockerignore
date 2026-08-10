@@ -1,14 +1,24 @@
+# VCS / IDE
 .git
 .github
 .vscode
+.idea
 
+# Local build artifacts / runtime cache
+/target
+cache/
 amiabot-pages
 *.log
 *.out
 
-cache/
-
+# Docs / agent / local-only
+AGENTS.md
+README.md
+README_zh.md
+requirements.md
 Dockerfile*
 docker-compose*.yml
-README.md
-requirements.md
+.gitignore
+.narrafork/
+.worktrees/
+old/

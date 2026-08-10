@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
-# --- Build Stage ---
-FROM rust:1.97.1-alpine AS builder
+# --- Chef base: toolchain + cargo-chef (pinned) ---
+FROM rust:1.97.1-alpine AS chef
 
 # musl/openssl for linking; curl/ca-certificates for utoipa-swagger-ui download
 RUN apk add --no-cache \
@@ -12,28 +12,37 @@ RUN apk add --no-cache \
     curl \
     ca-certificates
 
-WORKDIR /app
-
 # Prefer static OpenSSL on musl
 ENV OPENSSL_STATIC=1 \
     OPENSSL_NO_VENDOR=1
 
-# Copy Cargo files for dependency caching
+RUN cargo install cargo-chef --locked --version 0.1.77
+
+WORKDIR /app
+
+# --- Planner: compute dependency recipe ---
+FROM chef AS planner
+
 COPY Cargo.toml Cargo.lock ./
-
-# Create dummy src/main.rs to build dependencies and cache them
-RUN mkdir src && echo "fn main() {}" > src/main.rs \
-    && cargo build --release \
-    && rm -rf src
-
-# Copy actual source code and templates
 COPY src ./src
-COPY templates ./templates
 
-# Ensure the package itself is rebuilt after replacing sources
-RUN touch src/main.rs && cargo build --release
+RUN cargo chef prepare --recipe-path recipe.json
 
-# --- Runtime Stage ---
+# --- Builder: cook deps (cached) then build the app ---
+FROM chef AS builder
+
+COPY --from=planner /app/recipe.json recipe.json
+
+# Build dependencies only; invalidated when Cargo.toml / Cargo.lock / dep graph changes
+RUN cargo chef cook --release --recipe-path recipe.json
+
+COPY Cargo.toml Cargo.lock ./
+COPY src ./src
+
+RUN cargo build --release --locked \
+    && cp /app/target/release/amiabot-pages /app/amiabot-pages
+
+# --- Runtime ---
 FROM alpine:3.20
 
 WORKDIR /app
@@ -42,9 +51,9 @@ WORKDIR /app
 RUN apk add --no-cache ca-certificates wget libgcc && adduser -D -u 10001 appuser
 
 # Copy built binary from builder
-COPY --from=builder /app/target/release/amiabot-pages /app/amiabot-pages
+COPY --from=builder /app/amiabot-pages /app/amiabot-pages
 
-# Copy templates and static assets
+# Copy templates and static assets (runtime only; does not bust compile layers)
 COPY templates /app/templates
 COPY static /app/static
 
