@@ -156,8 +156,7 @@ pub async fn new_gallery_api_request(path: &str, params: &HashMap<String, String
 
 pub async fn call_gallery_json<T: for<'de> Deserialize<'de>>(path: &str, params: &HashMap<String, String>) -> Result<T, String> {
     let req = new_gallery_api_request(path, params).await?;
-    let client = reqwest::Client::new();
-    let resp = client.execute(req).await.map_err(|e| format!("请求 gallery 服务失败: {}", e))?;
+    let resp = crate::pkg::http_client::execute(req).await.map_err(|e| format!("请求 gallery 服务失败: {}", e))?;
     
     if !resp.status().is_success() {
         let status = resp.status();

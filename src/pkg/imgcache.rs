@@ -185,7 +185,7 @@ impl ImageCache {
             }
         }
 
-        let resp = builder.send().await.map_err(|e| format!("HTTP request error: {}", e))?;
+        let resp = crate::pkg::http_client::send(builder).await.map_err(|e| format!("HTTP request error: {}", e))?;
         if !resp.status().is_success() {
             let status = resp.status();
             let body = resp.text().await.unwrap_or_default();

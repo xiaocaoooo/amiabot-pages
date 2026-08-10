@@ -56,6 +56,12 @@ async fn access_log_middleware(req: Request, next: Next) -> Response {
     let query = req.uri().query().unwrap_or("").to_owned();
     let started = Instant::now();
 
+    if query.is_empty() {
+        tracing::debug!(%method, %path, "http request start");
+    } else {
+        tracing::debug!(%method, %path, %query, "http request start");
+    }
+
     let response = next.run(req).await;
 
     let status = response.status().as_u16();

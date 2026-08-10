@@ -151,7 +151,7 @@ async fn get_b30_chart_csv() -> Result<String, String> {
         .build()
         .unwrap_or_default();
 
-    let resp = client.get(B30_CHART_URL).send().await
+    let resp = crate::pkg::http_client::send(client.get(B30_CHART_URL)).await
         .map_err(|e| format!("获取难度表失败: {}", e))?;
 
     if !resp.status().is_success() {
@@ -262,8 +262,7 @@ async fn fetch_suite_music_results(base_url: &str, server: &str, user_id: &str) 
         }
     }
 
-    let resp = builder
-        .send()
+    let resp = crate::pkg::http_client::send(builder)
         .await
         .map_err(|e| format!("请求 suite-api 失败: {}", e))?;
     if !resp.status().is_success() {

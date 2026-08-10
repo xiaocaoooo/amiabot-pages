@@ -176,7 +176,7 @@ pub async fn pixiv_image_proxy_handler(Query(q): Query<PixivQuery>) -> impl Into
     let req_builder = client.get(parsed_url.clone())
         .header("Referer", "https://www.pixiv.net/");
 
-    let resp = match req_builder.send().await {
+    let resp = match crate::pkg::http_client::send(req_builder).await {
         Ok(r) => r,
         Err(e) => return (StatusCode::BAD_GATEWAY, format!("请求 Pixiv 图片失败: {}", e)).into_response(),
     };
@@ -262,9 +262,10 @@ pub async fn pixiv_ugoira_gif_handler(Query(q): Query<PixivQuery>) -> impl IntoR
 async fn get_pixiv_illust_detail(pid: i32) -> Result<PixivIllust, String> {
     let client = reqwest::Client::new();
     let url = format!("https://public-api.pixiv.net/v1/works/{}.json", pid);
-    let resp = client.get(&url)
-        .header("Referer", "https://www.pixiv.net/")
-        .send().await
+    let resp = crate::pkg::http_client::send(
+        client.get(&url)
+            .header("Referer", "https://www.pixiv.net/")
+    ).await
         .map_err(|e| e.to_string())?;
 
     if !resp.status().is_success() {
@@ -279,9 +280,10 @@ async fn get_pixiv_illust_detail(pid: i32) -> Result<PixivIllust, String> {
 async fn get_pixiv_ugoira_metadata(pid: i32) -> Result<PixivUgoiraMetadata, String> {
     let client = reqwest::Client::new();
     let url = format!("https://public-api.pixiv.net/v1/ugoira/{}/metadata.json", pid);
-    let resp = client.get(&url)
-        .header("Referer", "https://www.pixiv.net/")
-        .send().await
+    let resp = crate::pkg::http_client::send(
+        client.get(&url)
+            .header("Referer", "https://www.pixiv.net/")
+    ).await
         .map_err(|e| e.to_string())?;
 
     if !resp.status().is_success() {
@@ -295,9 +297,10 @@ async fn get_pixiv_ugoira_metadata(pid: i32) -> Result<PixivUgoiraMetadata, Stri
 
 async fn download_pixiv_binary(url: &str, max_bytes: u64) -> Result<Vec<u8>, String> {
     let client = reqwest::Client::new();
-    let resp = client.get(url)
-        .header("Referer", "https://www.pixiv.net/")
-        .send().await
+    let resp = crate::pkg::http_client::send(
+        client.get(url)
+            .header("Referer", "https://www.pixiv.net/")
+    ).await
         .map_err(|e| e.to_string())?;
 
     if !resp.status().is_success() {

@@ -213,11 +213,11 @@ pub async fn video_handler(Query(q): Query<BilibiliQuery>) -> impl IntoResponse 
         .build()
         .unwrap_or_default();
 
-    let res = client.get("https://api.bilibili.com/x/web-interface/view")
-        .query(&query_params)
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36")
-        .send()
-        .await;
+    let res = crate::pkg::http_client::send(
+        client.get("https://api.bilibili.com/x/web-interface/view")
+            .query(&query_params)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36")
+    ).await;
 
     let resp = match res {
         Ok(r) => r,

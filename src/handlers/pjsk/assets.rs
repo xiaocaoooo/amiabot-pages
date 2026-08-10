@@ -86,7 +86,7 @@ async fn fetch_latest_commit_sha(server: &str) -> Result<String, String> {
     let url = format!("https://api.github.com/repos/Sekai-World/{}/commits?sha=main&per_page=1", repo);
 
     let builder = github_request(&url)?;
-    let resp = builder.send().await.map_err(|e| format!("请求 GitHub API 失败 ({}): {}", server, e))?;
+    let resp = crate::pkg::http_client::send(builder).await.map_err(|e| format!("请求 GitHub API 失败 ({}): {}", server, e))?;
     
     if !resp.status().is_success() {
         let status = resp.status();
@@ -123,7 +123,7 @@ async fn fetch_file_list(server: &str) -> Result<Vec<String>, String> {
     let url = format!("https://api.github.com/repos/Sekai-World/{}/contents/", repo);
 
     let builder = github_request(&url)?;
-    let resp = builder.send().await.map_err(|e| format!("请求 GitHub API 失败 ({}): {}", server, e))?;
+    let resp = crate::pkg::http_client::send(builder).await.map_err(|e| format!("请求 GitHub API 失败 ({}): {}", server, e))?;
 
     if !resp.status().is_success() {
         let status = resp.status();
@@ -148,9 +148,10 @@ async fn download_file(server: &str, file: &str) -> Result<(), String> {
         .build()
         .unwrap_or_default();
 
-    let resp = client.get(&url)
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-        .send().await
+    let resp = crate::pkg::http_client::send(
+        client.get(&url)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+    ).await
         .map_err(|e| e.to_string())?;
 
     if !resp.status().is_success() {

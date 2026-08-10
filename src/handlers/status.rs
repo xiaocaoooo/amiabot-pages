@@ -267,12 +267,13 @@ pub async fn zeabur_page_handler(headers: HeaderMap) -> impl IntoResponse {
 
     let request_payload = serde_json::json!({ "query": ZEABUR_STATUS_QUERY });
 
-    let resp = match client.post(ZEABUR_GRAPHQL_ENDPOINT)
-        .header("Authorization", format!("Bearer {}", token))
-        .header("Content-Type", "application/json")
-        .header("X-Request-Type", "GraphQL")
-        .json(&request_payload)
-        .send().await
+    let resp = match crate::pkg::http_client::send(
+        client.post(ZEABUR_GRAPHQL_ENDPOINT)
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .header("X-Request-Type", "GraphQL")
+            .json(&request_payload)
+    ).await
     {
         Ok(r) => r,
         Err(e) => return render_zeabur_error(&format!("请求 Zeabur 失败: {}", e)).into_response(),

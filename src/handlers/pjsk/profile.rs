@@ -202,8 +202,7 @@ async fn fetch_remote_profile(
     let url = profile_api_url(base_url, server, user_id);
     let builder = apply_profile_headers(client.get(&url));
 
-    let resp = builder
-        .send()
+    let resp = crate::pkg::http_client::send(builder)
         .await
         .map_err(|e| format!("请求 profile 失败: {}", e))?;
     if !resp.status().is_success() {
@@ -230,8 +229,7 @@ async fn fetch_remote_profile_bytes(
     let url = profile_api_url(base_url, server, user_id);
     let builder = apply_profile_headers(client.get(&url));
 
-    let resp = builder
-        .send()
+    let resp = crate::pkg::http_client::send(builder)
         .await
         .map_err(|e| format!("请求 profile 失败: {}", e))?;
     if !resp.status().is_success() {
