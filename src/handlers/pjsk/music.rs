@@ -1,10 +1,8 @@
 use axum::{
     extract::Query,
     response::IntoResponse,
-    http::StatusCode,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use crate::handlers::pjsk::{VALID_SERVERS, SERVER_NAMES};
 use crate::handlers::pjsk::asset_source::download_asset_by_label;
 use crate::handlers::pjsk::assets::read_cached_json;
@@ -17,6 +15,7 @@ pub struct MusicQuery {
 }
 
 #[derive(Serialize, Clone)]
+#[allow(non_snake_case)]
 pub struct VocalInfo {
     pub VocalistType: String,
     pub Name: String,
@@ -24,6 +23,7 @@ pub struct VocalInfo {
 }
 
 #[derive(Serialize, Clone)]
+#[allow(non_snake_case)]
 pub struct DifficultyInfo {
     pub DifficultyType: String,
     pub PlayLevel: i32,
@@ -31,12 +31,14 @@ pub struct DifficultyInfo {
 }
 
 #[derive(Serialize, Clone)]
+#[allow(non_snake_case)]
 pub struct EventInfo {
     pub EventID: i32,
     pub EventName: String,
 }
 
 #[derive(Serialize, Clone)]
+#[allow(non_snake_case)]
 pub struct MusicDetail {
     pub ID: i32,
     pub Title: String,
@@ -56,12 +58,14 @@ pub struct MusicDetail {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct MusicResponse {
     pub Music: Option<MusicDetail>,
     pub Error: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
 struct MusicEntry {
     id: i32,
     title: String,
@@ -74,6 +78,7 @@ struct MusicEntry {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
 struct MusicDifficultyEntry {
     musicId: i32,
     musicDifficulty: String,
@@ -82,32 +87,16 @@ struct MusicDifficultyEntry {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct MusicVocalEntry {
     musicId: i32,
     musicVocalistType: String,
     assetbundleName: String,
 }
 
-#[derive(Deserialize, Debug)]
-struct CharacterEntry {
-    id: i32,
-    firstName: Option<String>,
-    givenName: Option<String>,
-}
-
 fn format_millis_time(ms: i64) -> String {
-    if ms <= 0 {
-        return String::new();
-    }
-    if let Some(dt) = chrono::NaiveDateTime::from_timestamp_opt(ms / 1000, 0) {
-        let local_dt: chrono::DateTime<chrono::Local> = chrono::DateTime::from_naive_utc_and_offset(
-            dt,
-            *chrono::Local::now().offset()
-        );
-        local_dt.format("%Y-%m-%d %H:%M:%S").to_string()
-    } else {
-        String::new()
-    }
+    crate::pkg::timefmt::format_unix_millis(ms)
 }
 
 pub async fn music_handler(Query(q): Query<MusicQuery>) -> impl IntoResponse {

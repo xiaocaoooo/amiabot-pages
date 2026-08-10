@@ -10,6 +10,8 @@ use chrono::Datelike;
 const QUERY_TEXT_LIMIT: usize = 180;
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 pub struct QueryParams {
     pub id: Option<String>,
     pub nickname: Option<String>,
@@ -45,12 +47,14 @@ pub struct QueryParams {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct DisplayItem {
     pub Label: String,
     pub Value: String,
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct DisplaySection {
     pub Title: String,
     pub GridTemplate: String,
@@ -58,12 +62,14 @@ pub struct DisplaySection {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct TextBlock {
     pub Title: String,
     pub Value: String,
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct UserPageData {
     pub Avatar: String,
     pub DisplayName: String,
@@ -74,12 +80,14 @@ pub struct UserPageData {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct UserResponse {
     pub User: Option<UserPageData>,
     pub Error: Option<String>,
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct GroupPageData {
     pub Avatar: String,
     pub Name: String,
@@ -90,6 +98,7 @@ pub struct GroupPageData {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct GroupResponse {
     pub Group: Option<GroupPageData>,
     pub Error: Option<String>,

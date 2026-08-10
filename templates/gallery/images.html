@@ -108,7 +108,7 @@
 {% set p = ImagesPage %}
 <div class="gallery-page">
     <section class="gallery-headline">
-        <div class="gallery-title">标签图片列表：{% for tag in p.QueryTags %}{% if tag.index %}、{% endif %}#{{ tag.tag }}{% endfor %}</div>
+        <div class="gallery-title">标签图片列表：{% for tag in p.QueryTags %}{% if not loop.first %}、{% endif %}#{{ tag }}{% endfor %}</div>
         <div class="gallery-subtitle">共 {{ p.Total }} 张图片</div>
     </section>
 

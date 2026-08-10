@@ -4,7 +4,6 @@ use axum::{
     http::{StatusCode, HeaderMap},
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::io::Cursor;
 use std::path::Path;
 use std::time::Duration;
@@ -19,6 +18,8 @@ const PIXIV_BINARY_CACHE_CONTROL: &str = "public, max-age=86400";
 const PIXIV_UGOIRA_ZIP_MAX_BYTES: u64 = 64 << 20;
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 pub struct PixivQuery {
     pub id: Option<String>,
     pub pid: Option<String>,
@@ -26,18 +27,21 @@ pub struct PixivQuery {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct PixivPageResponse {
     pub Error: Option<String>,
     pub Illust: Option<PixivIllustView>,
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct PixivIllustView {
     pub ID: i32,
     pub Title: String,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
+#[allow(non_snake_case)]
 pub struct PixivIllust {
     pub id: i32,
     pub title: String,
@@ -51,43 +55,55 @@ pub struct PixivIllust {
 }
 
 #[derive(Deserialize, Serialize, Clone, Default, Debug)]
+#[allow(non_snake_case)]
 pub struct MetaSinglePage {
     pub original_image_url: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Default, Debug)]
+#[allow(non_snake_case)]
 pub struct MetaPage {
     pub image_urls: ImageUrls,
 }
 
 #[derive(Deserialize, Serialize, Clone, Default, Debug)]
+#[allow(non_snake_case)]
 pub struct ImageUrls {
     pub original: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct PixivUgoiraMetadata {
     ugoira_metadata: UgoiraMetadata,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct UgoiraMetadata {
     zip_urls: ZipUrls,
     frames: Vec<UgoiraFrame>,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct ZipUrls {
     medium: String,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct UgoiraFrame {
     file: String,
     delay: i32,
 }
 
 #[derive(Serialize, Debug)]
+#[allow(non_snake_case)]
 pub struct PixivMediaManifest {
     pub pid: i32,
     pub title: String,
@@ -97,18 +113,14 @@ pub struct PixivMediaManifest {
 }
 
 #[derive(Serialize, Debug)]
+#[allow(non_snake_case)]
 pub struct PixivMediaItem {
     pub index: usize,
     pub kind: String,
     pub path: String,
 }
 
-pub fn pixiv_image_headers() -> HashMap<String, String> {
-    let mut h = HashMap::new();
-    h.insert("Referer".to_string(), "https://www.pixiv.net/".to_string());
-    h
-}
-
+pub 
 fn parse_pid(q: &PixivQuery) -> Result<i32, String> {
     let pid_str = q.pid.as_ref().or(q.id.as_ref()).map(|s| s.trim()).unwrap_or("");
     if pid_str.is_empty() {
@@ -205,6 +217,9 @@ pub async fn pixiv_image_proxy_handler(Query(q): Query<PixivQuery>) -> impl Into
         .unwrap_or("image.png");
 
     let mut headers = HeaderMap::new();
+    if let Ok(v) = content_type.parse() {
+        headers.insert(axum::http::header::CONTENT_TYPE, v);
+    }
     headers.insert(axum::http::header::CACHE_CONTROL, PIXIV_BINARY_CACHE_CONTROL.parse().unwrap());
     headers.insert(
         axum::http::header::CONTENT_DISPOSITION,

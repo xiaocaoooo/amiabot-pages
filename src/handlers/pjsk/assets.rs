@@ -5,7 +5,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -25,16 +25,22 @@ pub static COMMIT_SHAS: Lazy<Arc<RwLock<HashMap<String, String>>>> = Lazy::new(|
 });
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 pub struct RefreshQuery {
     pub force: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct GhCommit {
     sha: String,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct GhContentsEntry {
     name: String,
     r#type: String,

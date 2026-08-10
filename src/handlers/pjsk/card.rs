@@ -1,10 +1,8 @@
 use axum::{
     extract::Query,
     response::IntoResponse,
-    http::StatusCode,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use crate::handlers::pjsk::{VALID_SERVERS, SERVER_NAMES};
 use crate::handlers::pjsk::asset_source::download_asset_by_label;
 use crate::handlers::pjsk::assets::read_cached_json;
@@ -17,6 +15,7 @@ pub struct CardQuery {
 }
 
 #[derive(Serialize, Clone)]
+#[allow(non_snake_case)]
 pub struct CardDetail {
     pub ID: i32,
     pub Title: String,
@@ -34,42 +33,34 @@ pub struct CardDetail {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct CardResponse {
     pub Card: Option<CardDetail>,
     pub Error: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct CardEntry {
     id: i32,
-    characterId: i32,
-    cardRarityType: String,
+    character_id: i32,
+    card_rarity_type: String,
     attribute: String,
     prefix: String,
-    assetbundleName: String,
-    releaseAt: i64,
+    assetbundle_name: String,
+    release_at: i64,
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct CharacterEntry {
     id: i32,
-    firstName: Option<String>,
-    givenName: Option<String>,
+    first_name: Option<String>,
+    given_name: Option<String>,
 }
 
 fn format_millis_time(ms: i64) -> String {
-    if ms <= 0 {
-        return String::new();
-    }
-    if let Some(dt) = chrono::NaiveDateTime::from_timestamp_opt(ms / 1000, 0) {
-        let local_dt: chrono::DateTime<chrono::Local> = chrono::DateTime::from_naive_utc_and_offset(
-            dt,
-            *chrono::Local::now().offset()
-        );
-        local_dt.format("%Y-%m-%d %H:%M:%S").to_string()
-    } else {
-        String::new()
-    }
+    crate::pkg::timefmt::format_unix_millis(ms)
 }
 
 pub async fn card_handler(Query(q): Query<CardQuery>) -> impl IntoResponse {
@@ -124,10 +115,10 @@ pub async fn card_handler(Query(q): Query<CardQuery>) -> impl IntoResponse {
         Err(e) => return render_html("pjsk/card.html", CardResponse { Card: None, Error: Some(format!("解析 gameCharacters.json 失败: {}", e)) }).into_response(),
     };
 
-    let char_name = match characters.iter().find(|ch| ch.id == target_card.characterId) {
+    let char_name = match characters.iter().find(|ch| ch.id == target_card.character_id) {
         Some(ch) => {
-            let first = ch.firstName.as_deref().unwrap_or("");
-            let given = ch.givenName.as_deref().unwrap_or("");
+            let first = ch.first_name.as_deref().unwrap_or("");
+            let given = ch.given_name.as_deref().unwrap_or("");
             if first.is_empty() {
                 given.to_string()
             } else if given.is_empty() {
@@ -139,14 +130,14 @@ pub async fn card_handler(Query(q): Query<CardQuery>) -> impl IntoResponse {
         None => "未知".to_string(),
     };
 
-    let rarity = &target_card.cardRarityType;
+    let rarity = &target_card.card_rarity_type;
     let attribute = &target_card.attribute;
 
     // Build assets asynchronously
-    let thumb_label = format!("card:thumbnail:{}:normal", target_card.assetbundleName);
+    let thumb_label = format!("card:thumbnail:{}:normal", target_card.assetbundle_name);
     let thumb = download_asset_by_label(&server, &thumb_label).await;
 
-    let card_image_label = format!("card:image:{}:normal", target_card.assetbundleName);
+    let card_image_label = format!("card:image:{}:normal", target_card.assetbundle_name);
     let card_image = download_asset_by_label(&server, &card_image_label).await;
 
     // Use placeholder values for frame or attribute icons (as configured in static files or remote)
@@ -159,7 +150,7 @@ pub async fn card_handler(Query(q): Query<CardQuery>) -> impl IntoResponse {
         CharacterName: char_name,
         Rarity: rarity.clone(),
         Attr: attribute.clone(),
-        ReleaseAt: format_millis_time(target_card.releaseAt),
+        ReleaseAt: format_millis_time(target_card.release_at),
         Server: SERVER_NAMES.get(&server).cloned().unwrap_or_else(|| server.to_uppercase()),
         ServerKey: server,
         FooterExtra: "Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />".to_string(),

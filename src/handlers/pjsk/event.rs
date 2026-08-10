@@ -4,7 +4,6 @@ use axum::{
     http::StatusCode,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use crate::handlers::pjsk::{VALID_SERVERS, SERVER_NAMES};
 use crate::handlers::pjsk::asset_source::download_asset_by_label;
 use crate::handlers::pjsk::assets::read_cached_json;
@@ -17,6 +16,7 @@ pub struct EventQuery {
 }
 
 #[derive(Serialize, Clone)]
+#[allow(non_snake_case)]
 pub struct CardView {
     pub ID: i32,
     pub Prefix: String,
@@ -24,6 +24,7 @@ pub struct CardView {
 }
 
 #[derive(Serialize, Clone)]
+#[allow(non_snake_case)]
 pub struct EventPageData {
     pub ID: i32,
     pub Name: String,
@@ -42,12 +43,14 @@ pub struct EventPageData {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct EventResponse {
     pub Event: Option<EventPageData>,
     pub Error: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
 struct EventEntry {
     id: i32,
     name: String,
@@ -59,6 +62,7 @@ struct EventEntry {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
 struct CardEntry {
     id: i32,
     prefix: String,
@@ -66,24 +70,14 @@ struct CardEntry {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
 struct EventCardsEntry {
     eventId: i32,
     cardId: i32,
 }
 
 fn format_millis_time(ms: i64) -> String {
-    if ms <= 0 {
-        return String::new();
-    }
-    if let Some(dt) = chrono::NaiveDateTime::from_timestamp_opt(ms / 1000, 0) {
-        let local_dt: chrono::DateTime<chrono::Local> = chrono::DateTime::from_naive_utc_and_offset(
-            dt,
-            *chrono::Local::now().offset()
-        );
-        local_dt.format("%Y-%m-%d %H:%M:%S").to_string()
-    } else {
-        String::new()
-    }
+    crate::pkg::timefmt::format_unix_millis(ms)
 }
 
 fn event_status(start: i64, close: i64) -> &'static str {

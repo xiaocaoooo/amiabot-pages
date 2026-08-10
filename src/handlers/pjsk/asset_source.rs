@@ -14,15 +14,6 @@ pub enum SekaiAssetSource {
     Haruki,
 }
 
-impl SekaiAssetSource {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::Snowy => "snowy",
-            Self::Uni => "uni",
-            Self::Haruki => "haruki",
-        }
-    }
-}
 
 const ASSET_RETRY_ROUNDS: usize = 2;
 

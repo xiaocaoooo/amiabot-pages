@@ -52,18 +52,10 @@
     <div style="display: flex; flex-wrap: nowrap; gap: 6px; margin-top: 6px; overflow-x: auto;">
         {% for diff_item in m.Difficulties %}
         {% set diff = diff_item.Difficulty %}
-        {% set bgColor = diff_item."#9e9e9e" %}
-        {% set textColor = diff_item."#ffffff" %}
-        {% if diff == "EASY" %}{% set bgColor = "#5AC06E" %}{% endif %}
-        {% if diff == "NORMAL" %}{% set bgColor = "#56A4D4" %}{% endif %}
-        {% if diff == "HARD" %}{% set bgColor = "#EFAF28" %}{% endif %}
-        {% if diff == "EXPERT" %}{% set bgColor = "#E84D53" %}{% endif %}
-        {% if diff == "MASTER" %}{% set bgColor = "#BB58B8" %}{% endif %}
-        {% if diff == "APPEND" %}{% set bgColor = "#EE92BC" %}{% endif %}
         <div
-            style="flex: 1; min-width: 0; text-align: center; padding: 6px 4px; background: {{ bgColor }}; border-radius: 6px;">
-            <div style="font-size: 10px; font-weight: bold; color: {{ textColor }};">{{ diff }}</div>
-            <div style="font-size: 14px; font-weight: bold; margin: 2px 0; color: {{ textColor }};">Lv.{{ diff_item.PlayLevel }}
+            style="flex: 1; min-width: 0; text-align: center; padding: 6px 4px; background: {% if diff == "EASY" %}#5AC06E{% elif diff == "NORMAL" %}#56A4D4{% elif diff == "HARD" %}#EFAF28{% elif diff == "EXPERT" %}#E84D53{% elif diff == "MASTER" %}#BB58B8{% elif diff == "APPEND" %}#EE92BC{% else %}#9e9e9e{% endif %}; border-radius: 6px;">
+            <div style="font-size: 10px; font-weight: bold; color: #ffffff;">{{ diff }}</div>
+            <div style="font-size: 14px; font-weight: bold; margin: 2px 0; color: #ffffff;">Lv.{{ diff_item.PlayLevel }}
             </div>
             <div style="font-size: 9px; color: rgba(255,255,255,0.85);">{{ diff_item.TotalNoteCount }} notes</div>
         </div>

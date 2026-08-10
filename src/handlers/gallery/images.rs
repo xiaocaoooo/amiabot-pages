@@ -10,11 +10,14 @@ use crate::handlers::gallery::common::{
 };
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 pub struct ImagesQuery {
     pub tags: Option<String>,
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct GalleryImageCard {
     pub ID: i64,
     pub Preview: String,
@@ -25,6 +28,7 @@ pub struct GalleryImageCard {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct GalleryImagesPageData {
     pub QueryTags: Vec<String>,
     pub Total: i64,
@@ -32,6 +36,7 @@ pub struct GalleryImagesPageData {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct ImagesResponse {
     pub ImagesPage: Option<GalleryImagesPageData>,
     pub Error: Option<String>,

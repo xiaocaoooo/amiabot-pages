@@ -27,6 +27,7 @@ pub struct B30Query {
 }
 
 #[derive(Serialize, Clone)]
+#[allow(non_snake_case)]
 pub struct B30ScoreEntry {
     pub Order: usize,
     pub Cover: String,
@@ -41,6 +42,7 @@ pub struct B30ScoreEntry {
 }
 
 #[derive(Serialize, Clone)]
+#[allow(non_snake_case)]
 pub struct B30PageData {
     pub Name: String,
     pub Server: String,
@@ -54,12 +56,15 @@ pub struct B30PageData {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct B30Response {
     pub B30: Option<B30PageData>,
     pub Error: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct MusicEntry {
     id: i32,
     title: String,
@@ -76,6 +81,8 @@ static B30_CHART_CACHE: Lazy<Arc<RwLock<Option<ChartCache>>>> = Lazy::new(|| {
 });
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct SuiteUserMusicResult {
     musicId: i32,
     musicDifficultyType: String,
@@ -87,11 +94,15 @@ struct SuiteUserMusicResult {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct SuiteUserProfile {
     name: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct SuiteUserMusicResponse {
     userMusicResults: Vec<SuiteUserMusicResult>,
     #[serde(default)]
@@ -297,14 +308,9 @@ async fn fetch_suite_music_results(base_url: &str, server: &str, user_id: &str) 
 
     let upload_time = data
         .upload_time
-        .and_then(|ts| {
+        .map(|ts| {
             let secs = if ts < 100_000_000_000 { ts } else { ts / 1000 };
-            chrono::NaiveDateTime::from_timestamp_opt(secs, 0)
-        })
-        .map(|dt| {
-            let local_dt: chrono::DateTime<chrono::Local> =
-                chrono::DateTime::from_naive_utc_and_offset(dt, *chrono::Local::now().offset());
-            local_dt.format("%Y-%m-%d %H:%M:%S").to_string()
+            crate::pkg::timefmt::format_unix_secs(secs)
         })
         .unwrap_or_default();
 

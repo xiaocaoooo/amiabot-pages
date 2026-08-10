@@ -8,6 +8,7 @@ use crate::handlers::gallery::common::{
 };
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct GalleryTagCard {
     pub Name: String,
     pub Count: i64,
@@ -17,12 +18,14 @@ pub struct GalleryTagCard {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct GalleryTagsPageData {
     pub TotalTags: usize,
     pub Items: Vec<GalleryTagCard>,
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct TagsResponse {
     pub TagsPage: Option<GalleryTagsPageData>,
     pub Error: Option<String>,

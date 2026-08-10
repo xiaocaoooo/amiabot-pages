@@ -7,11 +7,6 @@ use crate::pkg::imgcache::DEFAULT_IMG_CACHE;
 
 pub const GALLERY_TAG_LIST_LIMIT: usize = 500;
 pub const GALLERY_IMAGE_LIST_PAGE_SIZE: usize = 100;
-pub const GALLERY_TAG_PREVIEW_WORKERS: usize = 8;
-pub const GALLERY_LIST_PREVIEW_WIDTH: usize = 320;
-pub const GALLERY_LIST_PREVIEW_HEIGHT: usize = 320;
-pub const GALLERY_TAG_PREVIEW_WIDTH: usize = 360;
-pub const GALLERY_TAG_PREVIEW_HEIGHT: usize = 240;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GalleryTag {

@@ -18,6 +18,7 @@ pub struct BilibiliQuery {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct ViewPage {
     pub Index: i32,
     pub Title: String,
@@ -25,6 +26,7 @@ pub struct ViewPage {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct BilibiliPageData {
     pub Title: String,
     pub BVID: String,
@@ -121,18 +123,7 @@ fn format_duration(sec: i32) -> String {
 }
 
 fn format_unix_time(ts: i64) -> String {
-    if ts <= 0 {
-        return String::new();
-    }
-    if let Some(dt) = chrono::NaiveDateTime::from_timestamp_opt(ts, 0) {
-        let local_dt: chrono::DateTime<chrono::Local> = chrono::DateTime::from_naive_utc_and_offset(
-            dt,
-            *chrono::Local::now().offset()
-        );
-        local_dt.format("%Y-%m-%d %H:%M:%S").to_string()
-    } else {
-        String::new()
-    }
+    crate::pkg::timefmt::format_unix_secs(ts)
 }
 
 fn render_error(msg: &str) -> impl IntoResponse {

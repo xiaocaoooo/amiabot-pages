@@ -8,7 +8,6 @@ use redis::AsyncCommands;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
-use std::sync::Arc;
 use url::form_urlencoded;
 
 pub const QUERY_PARAM_NAME: &str = "param_id";
@@ -59,7 +58,7 @@ impl ParamIDMiddleware {
         }
 
         let client = redis::Client::open(url_str).map_err(|e| format!("Valkey client error: {}", e))?;
-        let mut key_template = env::var("VALKEY_KEY_TEMPLATE")
+        let key_template = env::var("VALKEY_KEY_TEMPLATE")
             .unwrap_or_else(|_| DEFAULT_KEY_TEMPLATE.to_string());
         if !key_template.contains("{id}") {
             return Err(format!("VALKEY_KEY_TEMPLATE 必须包含 {{id}}: {:?}", key_template));

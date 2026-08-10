@@ -12,18 +12,21 @@ use crate::handlers::pjsk::{SERVER_NAMES, VALID_SERVERS};
 use crate::handlers::{format_upstream_http_error, render_html};
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
 pub struct ProfileQuery {
     pub id: Option<String>,
     pub server: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[allow(non_snake_case)]
 pub struct ProfileResponse {
     pub Profile: Option<PjskProfilePageData>,
     pub Error: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[allow(non_snake_case)]
 pub struct PjskProfilePageData {
     pub ServerName: String,
     pub ServerKey: String,
@@ -35,12 +38,14 @@ pub struct PjskProfilePageData {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
 struct RemoteProfileUser {
     name: Option<String>,
     rank: Option<i32>,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
 struct RemoteProfileResponse {
     user: Option<RemoteProfileUser>,
 }

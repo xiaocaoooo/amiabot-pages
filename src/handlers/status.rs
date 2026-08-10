@@ -1,7 +1,6 @@
 use axum::{
-    extract::Query,
+    http::HeaderMap,
     response::IntoResponse,
-    http::{StatusCode, HeaderMap},
 };
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -47,28 +46,38 @@ query Query {
 "#;
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 pub struct ZeaburGraphQLRequest {
     pub query: &'static str,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct ZeaburGraphQLResponse {
     data: Option<ZeaburStatusData>,
     errors: Option<Vec<ZeaburGraphQLErr>>,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct ZeaburGraphQLErr {
     message: String,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct ZeaburStatusData {
     servers: Vec<ZeaburServer>,
     projects: ZeaburProjectConnection,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct ZeaburServer {
     _id: String,
     city: String,
@@ -78,6 +87,8 @@ struct ZeaburServer {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct ZeaburServerState {
     isOnline: bool,
     totalCPU: f64,
@@ -90,16 +101,22 @@ struct ZeaburServerState {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct ZeaburProjectConnection {
     edges: Vec<ZeaburProjectEdge>,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct ZeaburProjectEdge {
     node: ZeaburProject,
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct ZeaburProject {
     _id: String,
     iconURL: String,
@@ -108,6 +125,8 @@ struct ZeaburProject {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 struct ZeaburService {
     _id: String,
     name: String,
@@ -115,6 +134,7 @@ struct ZeaburService {
 }
 
 #[derive(Serialize, Clone)]
+#[allow(non_snake_case)]
 pub struct ZeaburServerView {
     pub Name: String,
     pub Location: String,
@@ -126,12 +146,14 @@ pub struct ZeaburServerView {
 }
 
 #[derive(Serialize, Clone)]
+#[allow(non_snake_case)]
 pub struct ZeaburServiceView {
     pub Name: String,
     pub Status: String,
 }
 
 #[derive(Serialize, Clone)]
+#[allow(non_snake_case)]
 pub struct ZeaburProjectView {
     pub Name: String,
     pub IconURL: String,
@@ -141,6 +163,7 @@ pub struct ZeaburProjectView {
 }
 
 #[derive(Serialize, Clone)]
+#[allow(non_snake_case)]
 pub struct ZeaburStatusPageData {
     pub FetchedAt: String,
     pub ServerCount: usize,
@@ -152,6 +175,7 @@ pub struct ZeaburStatusPageData {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct ZeaburResponse {
     pub Status: Option<ZeaburStatusPageData>,
     pub Error: Option<String>,

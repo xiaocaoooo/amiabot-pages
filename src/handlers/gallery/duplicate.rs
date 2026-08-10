@@ -9,6 +9,8 @@ use crate::handlers::gallery::common::{
 };
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
 pub struct DuplicateQuery {
     pub current_image_url: Option<String>,
     pub duplicate_id: Option<String>,
@@ -17,6 +19,7 @@ pub struct DuplicateQuery {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct DuplicatePageData {
     pub CurrentImage: String,
     pub ExistingImage: String,
@@ -26,6 +29,7 @@ pub struct DuplicatePageData {
 }
 
 #[derive(Serialize)]
+#[allow(non_snake_case)]
 pub struct DuplicateResponse {
     pub Duplicate: Option<DuplicatePageData>,
     pub Error: Option<String>,
