@@ -195,7 +195,11 @@ pub async fn refresh_server(server: &str, max_concurrency: usize, force: bool) -
                 results.insert("_skipped".to_string(), format!("commit SHA 未变化且文件完整: {}", &remote_sha[..12.min(remote_sha.len())]));
                 return results;
             }
-            println!("[pjsk] {}: SHA 未变化但缺少 {} 个文件，继续下载", server, missing);
+            tracing::info!(
+                %server,
+                missing,
+                "masterdata SHA 未变化但缺少文件，继续下载"
+            );
         }
     }
 
@@ -285,23 +289,27 @@ pub async fn init_master_data() {
     }
     drop(shas);
 
-    println!("[pjsk] 开始全量下载 masterdata（等待完成后服务才会启动）...");
+    tracing::info!("开始加载 masterdata（等待完成后服务才会启动）");
     let results = refresh_all(false).await;
     let (mut total, mut failed) = (0, 0);
     for (server, server_results) in results {
         for (key, status) in server_results {
             if key.starts_with('_') {
-                println!("[pjsk] {}: {} = {}", server, key, status);
+                tracing::info!(%server, %key, %status, "masterdata 状态");
                 continue;
             }
             total += 1;
             if status != "ok" {
                 failed += 1;
-                println!("[pjsk] 下载失败: {} 原因: {}", remote_url(&server, &key), status);
+                tracing::warn!(
+                    url = %remote_url(&server, &key),
+                    error = %status,
+                    "masterdata 文件下载失败"
+                );
             }
         }
     }
-    println!("[pjsk] masterdata 加载完成: {} 个文件, {} 个失败", total, failed);
+    tracing::info!(total, failed, "masterdata 加载完成");
 }
 
 pub async fn master_data_handler(

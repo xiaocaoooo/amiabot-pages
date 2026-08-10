@@ -114,7 +114,10 @@ fn parse_sekai_asset_sources(raw: &str) -> Vec<SekaiAssetSource> {
             "uni" => SekaiAssetSource::Uni,
             "haruki" => SekaiAssetSource::Haruki,
             _ => {
-                println!("[pjsk] 忽略无效 SEKAI_ASSET 配置项: {:?} (支持: snowy, uni, haruki)", token);
+                tracing::warn!(
+                    ?token,
+                    "忽略无效 SEKAI_ASSET 配置项 (支持: snowy, uni, haruki)"
+                );
                 continue;
             }
         };
@@ -222,7 +225,7 @@ fn prioritize_asset_candidates(candidates: Vec<String>, preferred: &str) -> Vec<
 pub async fn download_asset_with_fallback(server: &str, label: &str, relative_paths: &[String]) -> String {
     let mut candidates = build_asset_candidates(server, relative_paths);
     if candidates.is_empty() {
-        println!("[pjsk] 资源候选地址为空: {}", label);
+        tracing::warn!(%label, "资源候选地址为空");
         return String::new();
     }
 
@@ -243,7 +246,12 @@ pub async fn download_asset_with_fallback(server: &str, label: &str, relative_pa
         }
     }
 
-    println!("[pjsk] 资源下载失败: {} (server={}, 尝试地址数={})", label, server, candidates.len());
+    tracing::warn!(
+        %label,
+        %server,
+        candidates = candidates.len(),
+        "资源下载失败"
+    );
     String::new()
 }
 
@@ -315,7 +323,7 @@ pub fn build_relative_paths_by_label(label: &str) -> (String, Vec<String>) {
 pub async fn download_asset_by_label(server: &str, label: &str) -> String {
     let (normalized_label, relative_paths) = build_relative_paths_by_label(label);
     if normalized_label.is_empty() || relative_paths.is_empty() {
-        println!("[pjsk] 不支持的资源 label: {:?}", label);
+        tracing::warn!(?label, "不支持的资源 label");
         return String::new();
     }
     download_asset_with_fallback(server, &normalized_label, &relative_paths).await

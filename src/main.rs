@@ -1,11 +1,16 @@
 use axum::{
-    routing::{get, post},
+    routing::get,
     Router,
     middleware,
 };
 use std::env;
 use std::net::SocketAddr;
 use std::time::Duration;
+use axum::extract::Request;
+use axum::middleware::Next;
+use axum::response::Response;
+use std::time::Instant;
+use tracing_subscriber::EnvFilter;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -45,12 +50,56 @@ use crate::handlers::status::zeabur_page_handler;
 )]
 struct ApiDoc;
 
+async fn access_log_middleware(req: Request, next: Next) -> Response {
+    let method = req.method().clone();
+    let path = req.uri().path().to_owned();
+    let query = req.uri().query().unwrap_or("").to_owned();
+    let started = Instant::now();
+
+    let response = next.run(req).await;
+
+    let status = response.status().as_u16();
+    let latency_ms = started.elapsed().as_secs_f64() * 1000.0;
+    if query.is_empty() {
+        tracing::info!(
+            %method,
+            %path,
+            status,
+            latency_ms = format!("{:.2}", latency_ms),
+            "http request"
+        );
+    } else {
+        tracing::info!(
+            %method,
+            %path,
+            %query,
+            status,
+            latency_ms = format!("{:.2}", latency_ms),
+            "http request"
+        );
+    }
+
+    response
+}
+
 #[tokio::main]
 async fn main() {
+    // 标准 tracing logger：默认 info，可用 RUST_LOG 覆盖
+    // 例如 RUST_LOG=amiabot_pages=debug,tower_http=info
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .with_target(true)
+        .with_level(true)
+        .with_ansi(false)
+        .init();
+
     let paramid_mw = match ParamIDMiddleware::new_from_env() {
         Ok(mw) => mw,
         Err(e) => {
-            eprintln!("初始化 param_id 中间件失败: {}", e);
+            tracing::error!(error = %e, "初始化 param_id 中间件失败");
             std::process::exit(1);
         }
     };
@@ -97,13 +146,16 @@ async fn main() {
 
     // Optional: inject param_id middleware
     if paramid_mw.is_enabled() {
-        println!("[paramid] 已启用 param_id 参数注入中间件");
+        tracing::info!("param_id 参数注入中间件已启用");
         let paramid_mw_clone = paramid_mw.clone();
         api_routes = api_routes.layer(middleware::from_fn(move |req, next| {
             let mw = paramid_mw_clone.clone();
             async move { mw.handle(req, next).await }
         }));
     }
+
+    // HTTP access log（放在最外层，覆盖完整请求生命周期）
+    api_routes = api_routes.layer(middleware::from_fn(access_log_middleware));
 
     // Initialize PJSK masterdata download & image cache
     init_master_data().await;
@@ -113,7 +165,7 @@ async fn main() {
 
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let addr: SocketAddr = format!("0.0.0.0:{}", port).parse().unwrap();
-    println!("Listening on http://{}", addr);
+    tracing::info!(%addr, "服务已启动");
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, api_routes).await.unwrap();

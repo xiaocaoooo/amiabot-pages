@@ -69,7 +69,7 @@ pub static TEMPLATE_ENV: Lazy<Environment<'static>> = Lazy::new(|| {
     };
 
     if let Err(e) = load_templates(&mut env) {
-        eprintln!("[template] Load template error: {}", e);
+        tracing::error!(error = %e, "加载模板失败");
     }
     
     env
@@ -290,12 +290,12 @@ pub fn render_html<S: Serialize>(template_name: &str, ctx: S) -> impl IntoRespon
         Ok(tmpl) => match tmpl.render(ctx) {
             Ok(html) => Html(html).into_response(),
             Err(e) => {
-                eprintln!("[template] Render error: {}", e);
+                tracing::error!(error = %e, "渲染模板失败");
                 (StatusCode::INTERNAL_SERVER_ERROR, format!("Render error: {}", e)).into_response()
             }
         },
         Err(e) => {
-            eprintln!("[template] Template not found: {}", e);
+            tracing::error!(error = %e, "模板不存在");
             (StatusCode::INTERNAL_SERVER_ERROR, format!("Template not found: {}", e)).into_response()
         }
     }

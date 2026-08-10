@@ -80,6 +80,12 @@ impl ImageCache {
     pub async fn load_index(&self) {
         let path = Path::new(&self.cache_dir);
         if !path.exists() {
+            tracing::info!(
+                cache_dir = %self.cache_dir,
+                loaded = 0,
+                size_mb = 0,
+                "图片缓存索引已加载（目录不存在）"
+            );
             return;
         }
         let mut items_write = self.items.write().await;
@@ -87,7 +93,14 @@ impl ImageCache {
         
         let entries = match fs::read_dir(path) {
             Ok(e) => e,
-            Err(_) => return,
+            Err(e) => {
+                tracing::warn!(
+                    cache_dir = %self.cache_dir,
+                    error = %e,
+                    "读取图片缓存目录失败"
+                );
+                return;
+            }
         };
 
         let mut loaded = 0;
@@ -126,7 +139,11 @@ impl ImageCache {
                 }
             }
         }
-        println!("[imgcache] 已加载 {} 条缓存索引, 占用 {} MB", loaded, *total_write / 1024 / 1024);
+        tracing::info!(
+            loaded,
+            size_mb = *total_write / 1024 / 1024,
+            "图片缓存索引已加载"
+        );
     }
 
     async fn read_data_url_from_file(&self, key: &str) -> Option<String> {
@@ -232,11 +249,11 @@ impl ImageCache {
                 drop(total_write);
 
                 self.save_to_file(&key, image_url, &data_url, &meta);
-                println!("[imgcache] 已缓存: {} ({} bytes)", image_url, size);
+                tracing::debug!(%image_url, size, "图片已缓存");
                 data_url
             }
             Err(err) => {
-                println!("[imgcache] 下载失败: {} 原因: {}", image_url, err);
+                tracing::warn!(%image_url, error = %err, "图片下载失败");
                 String::new()
             }
         }
@@ -264,7 +281,12 @@ impl ImageCache {
 
         if *total_write <= self.max_size {
             if expired_count > 0 {
-                println!("[imgcache] 清理完成: 过期 {} 条, 剩余 {} 条, 占用 {} MB", expired_count, items_write.len(), *total_write / 1024 / 1024);
+                tracing::info!(
+                    expired = expired_count,
+                    remaining = items_write.len(),
+                    size_mb = *total_write / 1024 / 1024,
+                    "图片缓存清理完成"
+                );
             }
             return;
         }
@@ -285,7 +307,13 @@ impl ImageCache {
             }
         }
 
-        println!("[imgcache] 清理完成: 过期 {} 条, 淘汰 {} 条, 剩余 {} 条, 占用 {} MB", expired_count, evicted_count, items_write.len(), *total_write / 1024 / 1024);
+        tracing::info!(
+            expired = expired_count,
+            evicted = evicted_count,
+            remaining = items_write.len(),
+            size_mb = *total_write / 1024 / 1024,
+            "图片缓存清理完成"
+        );
     }
 
     pub fn start_cleanup_ticker(self: Arc<Self>, interval: Duration) {
