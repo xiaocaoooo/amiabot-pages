@@ -1,5 +1,5 @@
-{{ define "gallery/duplicate" }}
-{{ template "layout/start" . }}
+{% extends "layout.html" %}
+{% block content %}
 <style>
     .duplicate-page {
         display: flex;
@@ -81,49 +81,48 @@
         font-weight: 700;
     }
 </style>
-{{ if .Error }}
+{% if Error %}
 <div class="container error-container">
     <div class="label">错误</div>
-    <div class="value">{{ .Error }}</div>
+    <div class="value">{{ Error }}</div>
 </div>
-{{ else }}
-{{ $d := .Duplicate }}
+{% else %}
+{% set d = Duplicate %}
 <div class="duplicate-page">
     <section class="duplicate-headline">
         <div class="duplicate-title">检测到重复上传</div>
-        <div class="duplicate-subtitle">这张图片已存在于图库中，已收录图片 ID：#{{ $d.DuplicateID }}</div>
+        <div class="duplicate-subtitle">这张图片已存在于图库中，已收录图片 ID：#{{ d.DuplicateID }}</div>
     </section>
 
     <section class="duplicate-grid">
         <article class="duplicate-card">
             <div class="duplicate-card-title">本次上传图片</div>
             <div class="duplicate-image-shell">
-                <img src="{{ $d.CurrentImage }}" alt="本次上传图片">
+                <img src="{{ d.CurrentImage }}" alt="本次上传图片">
             </div>
-            {{ if $d.CurrentTags }}
+            {% if d.CurrentTags %}
             <div class="duplicate-tags">
-                {{ range $d.CurrentTags }}
-                <span class="duplicate-tag">{{ . }}</span>
-                {{ end }}
+                {% for tag in d.CurrentTags %}
+                <span class="duplicate-tag">{{ tag }}</span>
+                {% endfor %}
             </div>
-            {{ end }}
+            {% endif %}
         </article>
 
         <article class="duplicate-card">
             <div class="duplicate-card-title">图库中已收录的图片</div>
             <div class="duplicate-image-shell">
-                <img src="{{ $d.ExistingImage }}" alt="图库中已收录的图片">
+                <img src="{{ d.ExistingImage }}" alt="图库中已收录的图片">
             </div>
-            {{ if $d.ExistingTags }}
+            {% if d.ExistingTags %}
             <div class="duplicate-tags">
-                {{ range $d.ExistingTags }}
-                <span class="duplicate-tag">{{ . }}</span>
-                {{ end }}
+                {% for tag in d.ExistingTags %}
+                <span class="duplicate-tag">{{ tag }}</span>
+                {% endfor %}
             </div>
-            {{ end }}
+            {% endif %}
         </article>
     </section>
 </div>
-{{ end }}
-{{ template "layout/end" . }}
-{{ end }}
+{% endif %}
+{% endblock %}

@@ -1,5 +1,5 @@
-{{ define "query/user" }}
-{{ template "layout/start" . }}
+{% extends "layout.html" %}
+{% block content %}
 <style>
     .query-page {
         display: flex;
@@ -121,56 +121,55 @@
         color: var(--color-on-surface);
     }
 </style>
-{{ if .Error }}
+{% if Error %}
 <div class="container error-container">
     <div class="label">错误</div>
-    <div class="value">{{ .Error }}</div>
+    <div class="value">{{ Error }}</div>
 </div>
-{{ else }}
-{{ $u := .User }}
+{% else %}
+{% set u = User %}
 <div class="query-page">
     <section class="query-hero">
         <div class="query-avatar">
-            {{ if $u.Avatar }}
-            <img src="{{ $u.Avatar }}" alt="{{ $u.DisplayName }}">
-            {{ else }}
+            {% if u.Avatar %}
+            <img src="{{ u.Avatar }}" alt="{{ u.DisplayName }}">
+            {% else %}
             QQ
-            {{ end }}
+            {% endif %}
         </div>
         <div style="min-width: 0; flex: 1;">
-            <div class="query-title">{{ $u.DisplayName }}</div>
-            <div class="query-subtitle"># {{ $u.ID }}</div>
-            {{ if $u.Badges }}
+            <div class="query-title">{{ u.DisplayName }}</div>
+            <div class="query-subtitle"># {{ u.ID }}</div>
+            {% if u.Badges %}
             <div class="query-badges">
-                {{ range $u.Badges }}
-                <span class="query-badge">{{ . }}</span>
-                {{ end }}
+                {% for badge in u.Badges %}
+                <span class="query-badge">{{ badge }}</span>
+                {% endfor %}
             </div>
-            {{ end }}
+            {% endif %}
         </div>
     </section>
 
-    {{ range $u.TextBlocks }}
+    {% for text_block in u.TextBlocks %}
     <section class="query-section">
-        <div class="query-section-title">{{ .Title }}</div>
-        <div class="query-text-block">{{ .Value }}</div>
+        <div class="query-section-title">{{ text_block.Title }}</div>
+        <div class="query-text-block">{{ text_block.Value }}</div>
     </section>
-    {{ end }}
+    {% endfor %}
 
-    {{ range $u.Sections }}
+    {% for section in u.Sections %}
     <section class="query-section">
-        <div class="query-section-title">{{ .Title }}</div>
-        <div class="query-grid" style="grid-template-columns: {{ .GridTemplate }};">
-            {{ range .Items }}
+        <div class="query-section-title">{{ section.Title }}</div>
+        <div class="query-grid" style="grid-template-columns: {{ section.GridTemplate }};">
+            {% for item in section.Items %}
             <div class="query-item">
-                <div class="query-item-label">{{ .Label }}</div>
-                <div class="query-item-value">{{ .Value }}</div>
+                <div class="query-item-label">{{ item.Label }}</div>
+                <div class="query-item-value">{{ item.Value }}</div>
             </div>
-            {{ end }}
+            {% endfor %}
         </div>
     </section>
-    {{ end }}
+    {% endfor %}
 </div>
-{{ end }}
-{{ template "layout/end" . }}
-{{ end }}
+{% endif %}
+{% endblock %}

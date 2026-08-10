@@ -1,17 +1,12 @@
-{{ define "pjsk/b30" }}
-{{ template "layout/start" . }}
-{{ template "pjsk/b30/content" . }}
-{{ template "layout/end" . }}
-{{ end }}
-
-{{ define "pjsk/b30/content" }}
-{{ if .Error }}
+{% extends "layout.html" %}
+{% block content %}
+{% if Error %}
 <div class="container error-container">
     <div class="label">错误</div>
-    <div class="value">{{ .Error }}</div>
+    <div class="value">{{ Error }}</div>
 </div>
-{{ else }}
-{{ $b := .B30 }}
+{% else %}
+{% set b = B30 %}
 <style>
     .b30-header { display: flex; flex-direction: column; gap: 4px; }
     .b30-name { font-size: 20px; font-weight: 800; line-height: 1.3; word-break: break-word; }
@@ -36,14 +31,14 @@
 <div class="container primary-container">
     <div class="label">B30 成绩信息</div>
     <div class="b30-header">
-        <div class="b30-name">{{ $b.Name }}</div>
-        <div class="b30-sub">[{{ $b.Server }}]{{ if $b.UpdatedTime }} · {{ $b.UpdatedTime }}{{ end }}</div>
+        <div class="b30-name">{{ b.Name }}</div>
+        <div class="b30-sub">[{{ b.Server }}]{% if b.UpdatedTime %} · {{ b.UpdatedTime }}{% endif %}</div>
     </div>
 </div>
 
 <div class="container secondary-container" style="margin-top: 8px;">
     <div class="label">Rating</div>
-    <div class="value" style="font-size: 26px; font-weight: 800; color: var(--color-primary);">{{ $b.UserRating }}</div>
+    <div class="value" style="font-size: 26px; font-weight: 800; color: var(--color-primary);">{{ b.UserRating }}</div>
 </div>
 
 <div class="container" style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant); margin-top: 8px;">
@@ -60,36 +55,32 @@
                 </tr>
             </thead>
             <tbody>
-            {{ range $s := $b.Scores }}
+            {% for s in b.Scores %}
                 <tr>
-                    <td class="order">{{ $s.Order }}</td>
+                    <td class="order">{{ s.s.Order }}</td>
                     <td>
                         <div class="b30-song-cell">
-                            {{ if $s.Cover }}
-                            <img class="b30-cover" src="{{ $s.Cover }}" />
-                            {{ end }}
-                            <div><div class="song">{{ $s.Name }}</div><div class="sid">{{ $s.SongID }}</div></div>
+                            {% if s.s.Cover %}
+                            <img class="b30-cover" src="{{ s.s.Cover }}" />
+                            {% endif %}
+                            <div><div class="song">{{ s.s.Name }}</div><div class="sid">{{ s.s.SongID }}</div></div>
                         </div>
                     </td>
-                    <td><span class="b30-diff" style="{{ $s.DiffStyle }}">{{ $s.Diff }}</span></td>
-                    <td class="cst">{{ $s.Constant }}</td>
-                    <td class="b30-result-icon">{{ if $s.ResultIcon }}<img src="{{ $s.ResultIcon }}" />{{ end }}</td>
+                    <td><span class="b30-diff" style="{{ s.s.DiffStyle }}">{{ s.s.Diff }}</span></td>
+                    <td class="cst">{{ s.s.Constant }}</td>
+                    <td class="b30-result-icon">{% if s.s.ResultIcon %}<img src="{{ s.s.ResultIcon }}" />{% endif %}</td>
                 </tr>
-            {{ end }}
-            {{ if eq $b.Count 0 }}
+            {% endfor %}
+            {% if b.Count == 0 %}
                 <tr><td colspan="5" class="b30-empty">暂无 B30 成绩数据</td></tr>
-            {{ end }}
+            {% endif %}
             </tbody>
         </table>
     </div>
     <div class="b30-info">
         计算方式：33 级及以上 FC 定数 -1.0，33 级以下 FC 定数 -1.5，AP 不减（Clear 不计入）。<br />
         仅供娱乐
-        {{ if $b.ChartUpdatedAt }}<br />定数更新于 {{ $b.ChartUpdatedAt }}。{{ end }}
+        {% if b.ChartUpdatedAt %}<br />定数更新于 {{ b.ChartUpdatedAt }}。{% endif %}
     </div>
 </div>
-
-{{ end }}
-{{ end }}
-
-{{ end }}
+{% endblock %}

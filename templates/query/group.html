@@ -1,5 +1,5 @@
-{{ define "query/group" }}
-{{ template "layout/start" . }}
+{% extends "layout.html" %}
+{% block content %}
 <style>
     .query-page {
         display: flex;
@@ -121,56 +121,55 @@
         color: var(--color-on-surface);
     }
 </style>
-{{ if .Error }}
+{% if Error %}
 <div class="container error-container">
     <div class="label">错误</div>
-    <div class="value">{{ .Error }}</div>
+    <div class="value">{{ Error }}</div>
 </div>
-{{ else }}
-{{ $g := .Group }}
+{% else %}
+{% set g = Group %}
 <div class="query-page">
     <section class="query-hero">
         <div class="query-avatar">
-            {{ if $g.Avatar }}
-            <img src="{{ $g.Avatar }}" alt="{{ $g.Name }}">
-            {{ else }}
+            {% if g.Avatar %}
+            <img src="{{ g.Avatar }}" alt="{{ g.Name }}">
+            {% else %}
             群聊
-            {{ end }}
+            {% endif %}
         </div>
         <div style="min-width: 0; flex: 1;">
-            <div class="query-title">{{ $g.Name }}</div>
-            <div class="query-subtitle"># {{ $g.ID }}</div>
-            {{ if $g.Badges }}
+            <div class="query-title">{{ g.Name }}</div>
+            <div class="query-subtitle"># {{ g.ID }}</div>
+            {% if g.Badges %}
             <div class="query-badges">
-                {{ range $g.Badges }}
-                <span class="query-badge">{{ . }}</span>
-                {{ end }}
+                {% for badge in g.Badges %}
+                <span class="query-badge">{{ badge }}</span>
+                {% endfor %}
             </div>
-            {{ end }}
+            {% endif %}
         </div>
     </section>
 
-    {{ range $g.Sections }}
+    {% for section in g.Sections %}
     <section class="query-section">
-        <div class="query-section-title">{{ .Title }}</div>
-        <div class="query-grid" style="grid-template-columns: {{ .GridTemplate }};">
-            {{ range .Items }}
+        <div class="query-section-title">{{ section.Title }}</div>
+        <div class="query-grid" style="grid-template-columns: {{ section.GridTemplate }};">
+            {% for item in section.Items %}
             <div class="query-item">
-                <div class="query-item-label">{{ .Label }}</div>
-                <div class="query-item-value">{{ .Value }}</div>
+                <div class="query-item-label">{{ item.Label }}</div>
+                <div class="query-item-value">{{ item.Value }}</div>
             </div>
-            {{ end }}
+            {% endfor %}
         </div>
     </section>
-    {{ end }}
+    {% endfor %}
 
-    {{ range $g.TextBlocks }}
+    {% for text_block in g.TextBlocks %}
     <section class="query-section">
-        <div class="query-section-title">{{ .Title }}</div>
-        <div class="query-text-block">{{ .Value }}</div>
+        <div class="query-section-title">{{ text_block.Title }}</div>
+        <div class="query-text-block">{{ text_block.Value }}</div>
     </section>
-    {{ end }}
+    {% endfor %}
 </div>
-{{ end }}
-{{ template "layout/end" . }}
-{{ end }}
+{% endif %}
+{% endblock %}

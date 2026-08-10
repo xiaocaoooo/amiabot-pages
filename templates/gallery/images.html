@@ -1,5 +1,5 @@
-{{ define "gallery/images" }}
-{{ template "layout/start" . }}
+{% extends "layout.html" %}
+{% block content %}
 <style>
     .gallery-page {
         display: flex;
@@ -99,51 +99,50 @@
         font-weight: 700;
     }
 </style>
-{{ if .Error }}
+{% if Error %}
 <div class="container error-container">
     <div class="label">错误</div>
-    <div class="value">{{ .Error }}</div>
+    <div class="value">{{ Error }}</div>
 </div>
-{{ else }}
-{{ $p := .ImagesPage }}
+{% else %}
+{% set p = ImagesPage %}
 <div class="gallery-page">
     <section class="gallery-headline">
-        <div class="gallery-title">标签图片列表：{{ range $index, $tag := $p.QueryTags }}{{ if $index }}、{{ end }}#{{ $tag }}{{ end }}</div>
-        <div class="gallery-subtitle">共 {{ $p.Total }} 张图片</div>
+        <div class="gallery-title">标签图片列表：{% for tag in p.QueryTags %}{% if tag.index %}、{% endif %}#{{ tag.tag }}{% endfor %}</div>
+        <div class="gallery-subtitle">共 {{ p.Total }} 张图片</div>
     </section>
 
-    {{ if $p.Items }}
+    {% if p.Items %}
     <section class="gallery-grid">
-        {{ range $p.Items }}
+        {% for item in p.Items %}
         <article class="gallery-card">
             <div class="gallery-thumb">
-                {{ if .HasPreview }}
-                <img src="{{ .Preview }}" alt="图片 #{{ .ID }}">
-                {{ else }}
+                {% if item.HasPreview %}
+                <img src="{{ item.Preview }}" alt="图片 #{{ item.ID }}">
+                {% else %}
                 <div class="gallery-empty-thumb">预览不可用</div>
-                {{ end }}
+                {% endif %}
             </div>
-            <div class="gallery-card-title">图片 #{{ .ID }}</div>
+            <div class="gallery-card-title">图片 #{{ item.ID }}</div>
             <div class="gallery-meta">
-                <span class="gallery-chip">{{ .Dimensions }}</span>
-                {{ if .CreatedAt }}
-                <span class="gallery-chip">{{ .CreatedAt }}</span>
-                {{ end }}
+                <span class="gallery-chip">{{ item.Dimensions }}</span>
+                {% if item.CreatedAt %}
+                <span class="gallery-chip">{{ item.CreatedAt }}</span>
+                {% endif %}
             </div>
-            {{ if .Tags }}
+            {% if item.Tags %}
             <div class="gallery-meta">
-                {{ range .Tags }}
-                <span class="gallery-chip">#{{ . }}</span>
-                {{ end }}
+                {% for tag in item.Tags %}
+                <span class="gallery-chip">#{{ tag }}</span>
+                {% endfor %}
             </div>
-            {{ end }}
+            {% endif %}
         </article>
-        {{ end }}
+        {% endfor %}
     </section>
-    {{ else }}
+    {% else %}
     <div class="gallery-empty-state">当前标签下还没有图片</div>
-    {{ end }}
+    {% endif %}
 </div>
-{{ end }}
-{{ template "layout/end" . }}
-{{ end }}
+{% endif %}
+{% endblock %}

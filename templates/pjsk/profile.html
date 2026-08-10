@@ -1,17 +1,12 @@
-{{ define "pjsk/profile" }}
-{{ template "layout/start" . }}
-{{ template "pjsk/profile/content" . }}
-{{ template "layout/end" . }}
-{{ end }}
-
-{{ define "pjsk/profile/content" }}
-{{ if .Error }}
+{% extends "layout.html" %}
+{% block content %}
+{% if Error %}
 <div class="container error-container">
     <div class="label">错误</div>
-    <div class="value">{{ .Error }}</div>
+    <div class="value">{{ Error }}</div>
 </div>
-{{ else }}
-{{ $p := .Profile }}
+{% else %}
+{% set p = Profile %}
 <style>
     .profile-stack {
         display: flex;
@@ -323,160 +318,154 @@
 <div class="profile-stack">
     <div class="container primary-container profile-identity">
         <div class="profile-avatar-wrap">
-            {{ if $p.HasLeaderCard }}
-            {{ $leader := $p.LeaderCard }}
+            {% if p.HasLeaderCard %}
+            {% set leader = p.LeaderCard %}
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 156 156" style="width: 120px; height: 120px;">
-                {{ if $leader.Thumbnail }}<image href="{{ $leader.Thumbnail }}" x="8" y="8" height="140" width="140">
-                </image>{{ end }}
-                {{ if $leader.Frame }}<image href="{{ $leader.Frame }}" x="0" y="0" height="156" width="156"></image>{{
-                end }}
-                {{ if $leader.AttrIcon }}<image href="{{ $leader.AttrIcon }}" x="1" y="1" width="35" height="35">
-                </image>{{ end }}
-                {{ range $leader.Stars }}<image href="{{ $leader.StarIcon }}" x="{{ . }}" y="118" width="28"
-                    height="28"></image>{{ end }}
+                {% if leader.Thumbnail %}<image href="{{ leader.Thumbnail }}" x="8" y="8" height="140" width="140">
+                </image>{% endif %}
+                {% if leader.Frame %}<image href="{{ leader.Frame }}" x="0" y="0" height="156" width="156"></image>{% endif %}
+                {% if leader.AttrIcon %}<image href="{{ leader.AttrIcon }}" x="1" y="1" width="35" height="35">
+                </image>{% endif %}
+                {% for star in leader.Stars %}<image href="{{ leader.StarIcon }}" x="{{ star }}" y="118" width="28"
+                    height="28"></image>{% endfor %}
             </svg>
-            {{ else }}
+            {% else %}
             <div class="profile-avatar-fallback">P</div>
-            {{ end }}
+            {% endif %}
         </div>
 
         <div>
             <div class="label">名片</div>
-            <div class="profile-player-name">{{ $p.Name }}</div>
-            <div class="profile-player-sub">{{ $p.Server }}</div>
+            <div class="profile-player-name">{{ p.Name }}</div>
+            <div class="profile-player-sub">{{ p.Server }}</div>
             <div class="profile-pill-row">
-                <span class="profile-pill">Rank {{ $p.Rank }}</span>
-                {{ if $p.UpdatedAt }}<span class="profile-pill subtle">更新时间 {{ $p.UpdatedAt }}</span>{{ end }}
+                <span class="profile-pill">Rank {{ p.Rank }}</span>
+                {% if p.UpdatedAt %}<span class="profile-pill subtle">更新时间 {{ p.UpdatedAt }}</span>{% endif %}
             </div>
-            {{ if $p.HasLeaderCard }}
+            {% if p.HasLeaderCard %}
             <div class="profile-leader-meta">
-                <div>队长卡：{{ $p.LeaderCard.CharacterName }}</div>
-                {{ if $p.LeaderCard.Prefix }}<div>卡名：{{ $p.LeaderCard.Prefix }}</div>{{ end }}
-                <div>{{ $p.LeaderCard.Rarity }} · {{ $p.LeaderCard.Attr }} · {{ $p.LeaderCard.ImageMode }}</div>
+                <div>队长卡：{{ p.LeaderCard.CharacterName }}</div>
+                {% if p.LeaderCard.Prefix %}<div>卡名：{{ p.LeaderCard.Prefix }}</div>{% endif %}
+                <div>{{ p.LeaderCard.Rarity }} · {{ p.LeaderCard.Attr }} · {{ p.LeaderCard.ImageMode }}</div>
             </div>
-            {{ end }}
+            {% endif %}
         </div>
     </div>
 
-    {{ if or $p.TwitterID $p.Word }}
+    {% if p.TwitterID or p.Word %}
     <div class="profile-info-grid">
-        {{ if $p.TwitterID }}
+        {% if p.TwitterID %}
         <div class="profile-card">
             <div class="label">X / Twitter</div>
-            <div class="value">@{{ $p.TwitterID }}</div>
+            <div class="value">@{{ p.TwitterID }}</div>
         </div>
-        {{ end }}
-        {{ if $p.Word }}
+        {% endif %}
+        {% if p.Word %}
         <div class="profile-card">
             <div class="label">留言</div>
-            <div class="profile-info-value">{{ $p.Word }}</div>
+            <div class="profile-info-value">{{ p.Word }}</div>
         </div>
-        {{ end }}
+        {% endif %}
     </div>
-    {{ end }}
+    {% endif %}
 
-    {{ if $p.HasHonors }}
+    {% if p.HasHonors %}
     <div class="profile-card">
         <div class="label">头衔</div>
         <div class="profile-honor-grid">
-            {{ range $p.Honors }}
-            <div class="profile-honor-item {{ if .IsMain }}main{{ else }}sub{{ end }}">
-                {{ if .HasArtwork }}
-                <div class="profile-honor-artwork">{{ .Artwork }}</div>
-                {{ end }}
-                <div class="profile-honor-title">{{ .Title }}</div>
-                <!-- <div class="profile-honor-subtitle">{{ .Slot }} · {{ .Subtitle }}</div> -->
+            {% for honor in p.Honors %}
+            <div class="profile-honor-item {% if honor.IsMain %}main{% else %}sub{% endif %}">
+                {% if honor.HasArtwork %}
+                <div class="profile-honor-artwork">{{ honor.Artwork }}</div>
+                {% endif %}
+                <div class="profile-honor-title">{{ honor.Title }}</div>
+                <!-- <div class="profile-honor-subtitle">{{ honor.Slot }} · {{ honor.Subtitle }}</div> -->
                 <div class="profile-honor-meta">
-                    <span class="profile-honor-badge">{{ .Kind }}</span>
-                    {{ if .Rarity }}<span class="profile-honor-badge">稀有度 {{ .Rarity }}</span>{{ end }}
-                    {{ if gt .Level 0 }}<span class="profile-honor-badge">Lv.{{ .Level }}</span>{{ end }}
+                    <span class="profile-honor-badge">{{ honor.Kind }}</span>
+                    {% if honor.Rarity %}<span class="profile-honor-badge">稀有度 {{ honor.Rarity }}</span>{% endif %}
+                    {% if honor.Level > 0 %}<span class="profile-honor-badge">Lv.{{ honor.Level }}</span>{% endif %}
                 </div>
-                {{ if .Description }}
-                <div class="profile-honor-desc">{{ .Description }}</div>
-                {{ end }}
+                {% if honor.Description %}
+                <div class="profile-honor-desc">{{ honor.Description }}</div>
+                {% endif %}
             </div>
-            {{ end }}
+            {% endfor %}
         </div>
     </div>
-    {{ end }}
+    {% endif %}
 
-    {{ if $p.DeckCards }}
+    {% if p.DeckCards %}
     <div class="profile-card">
         <div class="label">主力卡组</div>
         <div class="profile-deck-grid">
-            {{ range $p.DeckCards }}
-            {{ $card := . }}
+            {% for card in p.DeckCards %}
+            {% set card = card %}
             <div class="profile-deck-card">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 156 156" style="width: 92px; height: 92px;">
-                    {{ if $card.Thumbnail }}<image href="{{ $card.Thumbnail }}" x="8" y="8" height="140" width="140">
-                    </image>{{ end }}
-                    {{ if $card.Frame }}<image href="{{ $card.Frame }}" x="0" y="0" height="156" width="156"></image>{{
-                    end }}
-                    {{ if $card.AttrIcon }}<image href="{{ $card.AttrIcon }}" x="1" y="1" width="35" height="35">
-                    </image>{{ end }}
-                    {{ range $card.Stars }}<image href="{{ $card.StarIcon }}" x="{{ . }}" y="118" width="28"
-                        height="28"></image>{{ end }}
+                    {% if card.Thumbnail %}<image href="{{ card.Thumbnail }}" x="8" y="8" height="140" width="140">
+                    </image>{% endif %}
+                    {% if card.Frame %}<image href="{{ card.Frame }}" x="0" y="0" height="156" width="156"></image>{% endif %}
+                    {% if card.AttrIcon %}<image href="{{ card.AttrIcon }}" x="1" y="1" width="35" height="35">
+                    </image>{% endif %}
+                    {% for star in card.Stars %}<image href="{{ card.StarIcon }}" x="{{ star }}" y="118" width="28"
+                        height="28"></image>{% endfor %}
                 </svg>
                 <div class="profile-deck-text">
-                    <strong>{{ $card.Prefix }}</strong>
-                    <div>{{ $card.CharacterName }}</div>
-                    <div>{{ $card.Rarity }} · {{ $card.Attr }}</div>
-                    <div>Lv.{{ $card.Level }}{{ if gt $card.MasterRank 0 }} · MR {{ $card.MasterRank }}{{ end }}</div>
-                    <div>{{ $card.ImageMode }}</div>
+                    <strong>{{ card.Prefix }}</strong>
+                    <div>{{ card.CharacterName }}</div>
+                    <div>{{ card.Rarity }} · {{ card.Attr }}</div>
+                    <div>Lv.{{ card.Level }}{% if card.MasterRank > 0 %} · MR {{ card.MasterRank }}{% endif %}</div>
+                    <div>{{ card.ImageMode }}</div>
                 </div>
             </div>
-            {{ end }}
+            {% endfor %}
         </div>
     </div>
-    {{ end }}
+    {% endif %}
 
-    {{ if $p.HasPlayStats }}
+    {% if p.HasPlayStats %}
     <div class="profile-card">
         <div class="label">打歌统计</div>
         <div class="profile-play-grid">
             <div></div>
-            {{ range $p.DifficultyColumns }}
-            <div class="profile-play-head" style="{{ .BackgroundStyle }}">{{ .Label }}</div>
-            {{ end }}
+            {% for col in p.DifficultyColumns %}
+            <div class="profile-play-head" style="{{ col.BackgroundStyle }}">{{ col.Label }}</div>
+            {% endfor %}
 
-            {{ range $row := $p.PlayStatsRows }}
-            <div class="profile-play-row-label">{{ $row.Label }}</div>
-            {{ range $cell := $row.Values }}
-            <div class="profile-play-cell" style="{{ $cell.Style }}">{{ $cell.Value }}</div>
-            {{ end }}
-            {{ end }}
+            {% for row in p.PlayStatsRows %}
+            <div class="profile-play-row-label">{{ row.row.Label }}</div>
+            {% for cell in row.row.Values %}
+            <div class="profile-play-cell" style="{{ cell.cell.Style }}">{{ cell.cell.Value }}</div>
+            {% endfor %}
+            {% endfor %}
         </div>
     </div>
-    {{ end }}
+    {% endif %}
 
-    {{ if $p.HasTrainingSection }}
+    {% if p.HasTrainingSection %}
     <div class="profile-card">
         <div class="label">养成</div>
-        {{ if $p.HasRadarChart }}
-        <div class="profile-radar-wrap">{{ $p.RadarChart }}</div>
-        {{ end }}
+        {% if p.HasRadarChart %}
+        <div class="profile-radar-wrap">{{ p.RadarChart|safe }}</div>
+        {% endif %}
 
-        {{ if $p.ChallengeLive.Available }}
+        {% if p.ChallengeLive.Available %}
         <div class="profile-challenge-grid">
             <div class="profile-challenge-item">
                 <div class="label">Challenge Live</div>
-                <div class="value">{{ $p.ChallengeLive.CharacterName }}</div>
+                <div class="value">{{ p.ChallengeLive.CharacterName }}</div>
             </div>
             <div class="profile-challenge-item">
                 <div class="label">最高阶段</div>
-                <div class="value">{{ if gt $p.ChallengeLive.StageRank 0 }}{{ $p.ChallengeLive.StageRank }}{{ else }}-{{
-                    end }}</div>
+                <div class="value">{% if p.ChallengeLive.StageRank > 0 %}{{ p.ChallengeLive.StageRank }}{% else %}-{% endif %}</div>
             </div>
             <div class="profile-challenge-item">
                 <div class="label">最高分</div>
-                <div class="value">{{ $p.ChallengeLive.HighScore }}</div>
+                <div class="value">{{ p.ChallengeLive.HighScore }}</div>
             </div>
         </div>
-        {{ end }}
+        {% endif %}
     </div>
-    {{ end }}
+    {% endif %}
 </div>
-{{ end }}
-{{ end }}
-
-{{ end }}
+{% endblock %}
