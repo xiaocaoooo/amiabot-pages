@@ -1,107 +1,103 @@
-use axum::response::IntoResponse;
-use serde::Serialize;
-use futures_util::future::join_all;
-use crate::handlers::render_html;
-use crate::handlers::gallery::common::{
-    gallery_image_downloader, build_gallery_preview_url, fetch_gallery_tags,
-    fetch_gallery_images_page, GALLERY_TAG_LIST_LIMIT,
-};
+use axum::{extract::Query, response::IntoResponse};
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize)]
+use crate::handlers::gallery::common::{
+    build_gallery_file_url, fetch_galleries, fetch_gallery_images, format_aliases,
+    gallery_image_downloader, GalleryDetail,
+};
+use crate::handlers::render_html;
+
+#[derive(Deserialize, Debug)]
+pub struct TagsQuery {}
+
+#[derive(Serialize, Clone)]
 #[allow(non_snake_case)]
-pub struct GalleryTagCard {
+pub struct GalleryCard {
+    pub ID: String,
     pub Name: String,
-    pub Count: i64,
-    pub FirstImageID: i64,
+    pub Aliases: String,
     pub Preview: String,
     pub HasPreview: bool,
+    pub ImageCount: i64,
+    pub FirstImageID: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 #[allow(non_snake_case)]
-pub struct GalleryTagsPageData {
-    pub TotalTags: usize,
-    pub Items: Vec<GalleryTagCard>,
+pub struct GalleryListPageData {
+    pub TotalGalleries: i64,
+    pub Items: Vec<GalleryCard>,
 }
 
 #[derive(Serialize)]
 #[allow(non_snake_case)]
 pub struct TagsResponse {
-    pub TagsPage: Option<GalleryTagsPageData>,
+    pub TagsPage: Option<GalleryListPageData>,
     pub Error: Option<String>,
 }
 
-pub async fn tags_handler() -> impl IntoResponse {
-    let tags = match fetch_gallery_tags("", GALLERY_TAG_LIST_LIMIT).await {
-        Ok(t) => t,
+pub async fn tags_handler(Query(_q): Query<TagsQuery>) -> impl IntoResponse {
+    let galleries = match fetch_galleries(None).await {
+        Ok(g) => g,
         Err(err) => {
-            return render_html("gallery/tags.html", TagsResponse {
-                TagsPage: None,
-                Error: Some(err),
-            });
+            return render_html(
+                "gallery/tags.html",
+                TagsResponse {
+                    TagsPage: None,
+                    Error: Some(err),
+                },
+            );
         }
     };
 
-    let total_tags = tags.len();
-    let items = match build_gallery_tag_cards(tags).await {
-        Ok(cards) => cards,
+    let items = match build_gallery_cards(galleries).await {
+        Ok(items) => items,
         Err(err) => {
-            return render_html("gallery/tags.html", TagsResponse {
-                TagsPage: None,
-                Error: Some(err),
-            });
+            return render_html(
+                "gallery/tags.html",
+                TagsResponse {
+                    TagsPage: None,
+                    Error: Some(err),
+                },
+            );
         }
     };
 
-    let data = GalleryTagsPageData {
-        TotalTags: total_tags,
-        Items: items,
-    };
-
-    render_html("gallery/tags.html", TagsResponse {
-        TagsPage: Some(data),
-        Error: None,
-    })
+    let total = items.len() as i64;
+    render_html(
+        "gallery/tags.html",
+        TagsResponse {
+            TagsPage: Some(GalleryListPageData {
+                TotalGalleries: total,
+                Items: items,
+            }),
+            Error: None,
+        },
+    )
 }
 
-async fn build_gallery_tag_cards(tags: Vec<crate::handlers::gallery::common::GalleryTag>) -> Result<Vec<GalleryTagCard>, String> {
-    let mut futures = Vec::new();
-
-    for tag in tags {
-        futures.push(tokio::spawn(async move {
-            let payload = fetch_gallery_images_page(&[tag.name.clone()], 1, 1).await;
-            match payload {
-                Ok(p) => {
-                    let mut card = GalleryTagCard {
-                        Name: tag.name,
-                        Count: p.total,
-                        FirstImageID: 0,
-                        Preview: String::new(),
-                        HasPreview: false,
-                    };
-                    if !p.items.is_empty() {
-                        let first = &p.items[0];
-                        card.FirstImageID = first.image.id;
-                        let preview_url = build_gallery_preview_url(first);
-                        let preview = gallery_image_downloader(&preview_url).await;
-                        card.HasPreview = !preview.trim().is_empty();
-                        card.Preview = preview;
-                    }
-                    Ok(card)
-                }
-                Err(e) => Err(format!("加载标签 #{} 首图失败: {}", tag.name, e)),
-            }
-        }));
+async fn build_gallery_cards(galleries: Vec<GalleryDetail>) -> Result<Vec<GalleryCard>, String> {
+    let mut items = Vec::with_capacity(galleries.len());
+    for g in galleries {
+        let images = fetch_gallery_images(&g.id).await.unwrap_or_default();
+        let image_count = images.len() as i64;
+        let (preview, first_id) = if let Some(first) = images.first() {
+            let url = build_gallery_file_url(&first.id);
+            let preview = gallery_image_downloader(&url).await;
+            (preview, first.id.clone())
+        } else {
+            (String::new(), String::new())
+        };
+        let has_preview = !preview.trim().is_empty();
+        items.push(GalleryCard {
+            ID: g.id,
+            Name: g.name,
+            Aliases: format_aliases(&g.aliases),
+            Preview: preview,
+            HasPreview: has_preview,
+            ImageCount: image_count,
+            FirstImageID: first_id,
+        });
     }
-
-    let results = join_all(futures).await;
-    let mut cards = Vec::new();
-    for res in results {
-        match res {
-            Ok(Ok(card)) => cards.push(card),
-            Ok(Err(err)) => return Err(err),
-            Err(e) => return Err(format!("Task panic: {}", e)),
-        }
-    }
-    Ok(cards)
+    Ok(items)
 }

@@ -99,6 +99,7 @@
         font-weight: 700;
     }
 </style>
+
 {% if Error %}
 <div class="container error-container">
     <div class="label">错误</div>
@@ -108,8 +109,11 @@
 {% set p = ImagesPage %}
 <div class="gallery-page">
     <section class="gallery-headline">
-        <div class="gallery-title">标签图片列表：{% for tag in p.QueryTags %}{% if not loop.first %}、{% endif %}#{{ tag }}{% endfor %}</div>
-        <div class="gallery-subtitle">共 {{ p.Total }} 张图片</div>
+        <div class="gallery-title">画廊图片：{{ p.GalleryName }}</div>
+        <div class="gallery-subtitle">
+            共 {{ p.Total }} 张
+            {% if p.GalleryAliases %} · 别名 {{ p.GalleryAliases }}{% endif %}
+        </div>
     </section>
 
     {% if p.Items %}
@@ -118,30 +122,33 @@
         <article class="gallery-card">
             <div class="gallery-thumb">
                 {% if item.HasPreview %}
-                <img src="{{ item.Preview }}" alt="图片 #{{ item.ID }}">
+                <img src="{{ item.Preview }}" alt="{{ item.ID }}">
                 {% else %}
                 <div class="gallery-empty-thumb">预览不可用</div>
                 {% endif %}
             </div>
-            <div class="gallery-card-title">图片 #{{ item.ID }}</div>
+            <div class="gallery-card-title">{% if item.Name %}{{ item.Name }}{% else %}{{ item.ID }}{% endif %}</div>
             <div class="gallery-meta">
                 <span class="gallery-chip">{{ item.Dimensions }}</span>
                 {% if item.CreatedAt %}
                 <span class="gallery-chip">{{ item.CreatedAt }}</span>
                 {% endif %}
             </div>
-            {% if item.Tags %}
+            {% if item.Aliases %}
             <div class="gallery-meta">
-                {% for tag in item.Tags %}
-                <span class="gallery-chip">#{{ tag }}</span>
+                {% for alias in item.Aliases %}
+                <span class="gallery-chip">#{{ alias }}</span>
                 {% endfor %}
             </div>
             {% endif %}
+            <div class="gallery-meta">
+                <span class="gallery-chip">{{ item.ID }}</span>
+            </div>
         </article>
         {% endfor %}
     </section>
     {% else %}
-    <div class="gallery-empty-state">当前标签下还没有图片</div>
+    <div class="gallery-empty-state">该画廊还没有图片</div>
     {% endif %}
 </div>
 {% endif %}

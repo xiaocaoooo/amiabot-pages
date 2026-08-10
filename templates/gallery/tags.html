@@ -98,6 +98,7 @@
         font-weight: 700;
     }
 </style>
+
 {% if Error %}
 <div class="container error-container">
     <div class="label">错误</div>
@@ -107,8 +108,8 @@
 {% set p = TagsPage %}
 <div class="gallery-page">
     <section class="gallery-headline">
-        <div class="gallery-title">图库标签总览</div>
-        <div class="gallery-subtitle">共 {{ p.TotalTags }} 个标签，每个标签展示第一张图与图片数量</div>
+        <div class="gallery-title">画廊总览</div>
+        <div class="gallery-subtitle">共 {{ p.TotalGalleries }} 个画廊；卡片展示名称、别名与首图预览</div>
     </section>
 
     {% if p.Items %}
@@ -119,21 +120,26 @@
                 {% if item.HasPreview %}
                 <img src="{{ item.Preview }}" alt="{{ item.Name }}">
                 {% else %}
-                <div class="gallery-empty-thumb">暂无图片</div>
+                <div class="gallery-empty-thumb">暂无预览</div>
                 {% endif %}
             </div>
-            <div class="gallery-tag-name">#{{ item.Name }}</div>
+            <div class="gallery-card-title">{{ item.Name }}</div>
             <div class="gallery-meta">
-                <span class="gallery-chip">{{ item.Count }} 张图片</span>
-                {% if item.FirstImageID > 0 %}
-                <span class="gallery-chip">首图 #{{ item.FirstImageID }}</span>
+                <span class="gallery-chip">{{ item.ImageCount }} 张</span>
+                {% if item.FirstImageID %}
+                <span class="gallery-chip">首图 {{ item.FirstImageID }}</span>
                 {% endif %}
             </div>
+            {% if item.Aliases %}
+            <div class="gallery-meta">
+                <span class="gallery-chip">别名：{{ item.Aliases }}</span>
+            </div>
+            {% endif %}
         </article>
         {% endfor %}
     </section>
     {% else %}
-    <div class="gallery-empty-state">当前图库还没有任何标签</div>
+    <div class="gallery-empty-state">当前还没有任何画廊</div>
     {% endif %}
 </div>
 {% endif %}

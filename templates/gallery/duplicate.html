@@ -81,6 +81,7 @@
         font-weight: 700;
     }
 </style>
+
 {% if Error %}
 <div class="container error-container">
     <div class="label">错误</div>
@@ -91,36 +92,32 @@
 <div class="duplicate-page">
     <section class="duplicate-headline">
         <div class="duplicate-title">检测到重复上传</div>
-        <div class="duplicate-subtitle">这张图片已存在于图库中，已收录图片 ID：#{{ d.DuplicateID }}</div>
+        <div class="duplicate-subtitle">
+            库中已存在图片：{{ d.DuplicateID }}
+            {% if d.GalleryName %} · 画廊 {{ d.GalleryName }}{% endif %}
+        </div>
     </section>
 
     <section class="duplicate-grid">
         <article class="duplicate-card">
             <div class="duplicate-card-title">本次上传图片</div>
             <div class="duplicate-image-shell">
-                <img src="{{ d.CurrentImage }}" alt="本次上传图片">
+                {% if d.HasCurrentImage %}
+                <img src="{{ d.CurrentImage }}" alt="current">
+                {% else %}
+                <div style="padding:24px;color:var(--color-on-surface-variant);">当前图不可用</div>
+                {% endif %}
             </div>
-            {% if d.CurrentTags %}
-            <div class="duplicate-tags">
-                {% for tag in d.CurrentTags %}
-                <span class="duplicate-tag">{{ tag }}</span>
-                {% endfor %}
-            </div>
-            {% endif %}
         </article>
-
         <article class="duplicate-card">
             <div class="duplicate-card-title">图库中已收录的图片</div>
             <div class="duplicate-image-shell">
-                <img src="{{ d.ExistingImage }}" alt="图库中已收录的图片">
+                {% if d.HasExistingImage %}
+                <img src="{{ d.ExistingImage }}" alt="existing">
+                {% else %}
+                <div style="padding:24px;color:var(--color-on-surface-variant);">已有图不可用</div>
+                {% endif %}
             </div>
-            {% if d.ExistingTags %}
-            <div class="duplicate-tags">
-                {% for tag in d.ExistingTags %}
-                <span class="duplicate-tag">{{ tag }}</span>
-                {% endfor %}
-            </div>
-            {% endif %}
         </article>
     </section>
 </div>
