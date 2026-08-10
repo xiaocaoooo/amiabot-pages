@@ -59,24 +59,23 @@ async fn access_log_middleware(req: Request, next: Next) -> Response {
     let response = next.run(req).await;
 
     let status = response.status().as_u16();
-    let latency_ms = started.elapsed().as_secs_f64() * 1000.0;
-    if query.is_empty() {
-        tracing::info!(
-            %method,
-            %path,
-            status,
-            latency_ms = format!("{:.2}", latency_ms),
-            "http request"
-        );
+    let latency_ms = format!("{:.2}", started.elapsed().as_secs_f64() * 1000.0);
+    if status >= 500 {
+        if query.is_empty() {
+            tracing::error!(%method, %path, status, latency_ms, "http request");
+        } else {
+            tracing::error!(%method, %path, %query, status, latency_ms, "http request");
+        }
+    } else if status >= 400 {
+        if query.is_empty() {
+            tracing::warn!(%method, %path, status, latency_ms, "http request");
+        } else {
+            tracing::warn!(%method, %path, %query, status, latency_ms, "http request");
+        }
+    } else if query.is_empty() {
+        tracing::info!(%method, %path, status, latency_ms, "http request");
     } else {
-        tracing::info!(
-            %method,
-            %path,
-            %query,
-            status,
-            latency_ms = format!("{:.2}", latency_ms),
-            "http request"
-        );
+        tracing::info!(%method, %path, %query, status, latency_ms, "http request");
     }
 
     response

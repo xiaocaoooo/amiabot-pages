@@ -96,18 +96,33 @@ impl ParamIDMiddleware {
             let key = self.key_template.replace("{id}", param_id);
             let mut conn = match client.get_async_connection().await {
                 Ok(c) => c,
-                Err(_) => return Err(StatusCode::BAD_GATEWAY),
+                Err(e) => {
+                    tracing::error!(error = %e, "param_id: Valkey 连接失败");
+                    return Err(StatusCode::BAD_GATEWAY);
+                }
             };
 
-            let raw_json: Option<String> = conn.get(&key).await.map_err(|_| StatusCode::BAD_GATEWAY)?;
+            let raw_json: Option<String> = match conn.get(&key).await {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::error!(error = %e, %key, "param_id: 读取 Valkey 失败");
+                    return Err(StatusCode::BAD_GATEWAY);
+                }
+            };
             let raw_json = match raw_json {
                 Some(json) => json,
-                None => return Err(StatusCode::BAD_REQUEST), // Invalid or expired param_id
+                None => {
+                    tracing::warn!(%key, "param_id: key 不存在或已过期");
+                    return Err(StatusCode::BAD_REQUEST);
+                }
             };
 
             let injected_map = match decode_stored_query(&raw_json) {
                 Ok(m) => m,
-                Err(_) => return Err(StatusCode::BAD_REQUEST),
+                Err(e) => {
+                    tracing::warn!(error = %e, %key, "param_id: 解析存储参数失败");
+                    return Err(StatusCode::BAD_REQUEST);
+                }
             };
 
             // Merge values: request values take priority over injected values

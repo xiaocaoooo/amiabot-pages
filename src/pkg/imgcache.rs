@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
 use once_cell::sync::Lazy;
+use crate::pkg::http_error::format_upstream_http_error;
 
 const DEFAULT_CACHE_DIR: &str = "cache/images";
 const DEFAULT_MAX_SIZE_MB: usize = 512;
@@ -186,7 +187,9 @@ impl ImageCache {
 
         let resp = builder.send().await.map_err(|e| format!("HTTP request error: {}", e))?;
         if !resp.status().is_success() {
-            return Err(format!("HTTP status {}", resp.status()));
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format_upstream_http_error("图片下载", status, &body));
         }
 
         let content_type = resp.headers()

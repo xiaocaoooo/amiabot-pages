@@ -14,7 +14,7 @@ use crate::handlers::pjsk::{VALID_SERVERS, SERVER_NAMES};
 use crate::handlers::pjsk::asset_source::download_asset_by_label;
 use crate::handlers::pjsk::assets::read_cached_json;
 use crate::pkg::imgcache::DEFAULT_IMG_CACHE;
-use crate::handlers::render_html;
+use crate::handlers::{render_html, format_upstream_http_error};
 
 const B30_CHART_URL: &str = "https://raw.githubusercontent.com/moe-sekai/MoeSekai-Hub/main/data/pjskb30/merged_chart.csv";
 const PJSK_B30_AP_ICON_URL: &str = "https://raw.githubusercontent.com/watagashi-uni/Unibot/refs/heads/main/pics/AllPerfect.png";
@@ -148,7 +148,9 @@ async fn get_b30_chart_csv() -> Result<String, String> {
         .map_err(|e| format!("获取难度表失败: {}", e))?;
 
     if !resp.status().is_success() {
-        return Err(format!("获取难度表返回 HTTP {}", resp.status()));
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format_upstream_http_error("B30 难度表", status, &body));
     }
 
     let data = resp.text().await.map_err(|e| format!("读取难度表失败: {}", e))?;
@@ -247,7 +249,9 @@ async fn fetch_suite_music_results(base_url: &str, server: &str, user_id: &str) 
 
     let resp = builder.send().await.map_err(|e| format!("请求 profile 接口失败: {}", e))?;
     if !resp.status().is_success() {
-        return Err(format!("接口返回异常状态: {}", resp.status()));
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format_upstream_http_error("B30 suite profile", status, &body));
     }
 
     let data = resp.json::<SuiteUserMusicResponse>().await.map_err(|e| format!("解析成绩 JSON 失败: {}", e))?;
@@ -285,6 +289,7 @@ fn build_music_index(server: &str) -> HashMap<i32, MusicEntry> {
 }
 
 fn render_b30_err(msg: &str) -> impl IntoResponse {
+    tracing::warn!(error = %msg, "b30 页面错误");
     render_html("pjsk/b30.html", B30Response {
         B30: None,
         Error: Some(msg.to_string()),

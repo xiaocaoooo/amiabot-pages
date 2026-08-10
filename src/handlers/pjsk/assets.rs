@@ -1,3 +1,4 @@
+use crate::pkg::http_error::format_upstream_http_error;
 use axum::{
     extract::{Path as AxumPath, Query},
     response::IntoResponse,
@@ -88,7 +89,9 @@ async fn fetch_latest_commit_sha(server: &str) -> Result<String, String> {
     let resp = builder.send().await.map_err(|e| format!("请求 GitHub API 失败 ({}): {}", server, e))?;
     
     if !resp.status().is_success() {
-        return Err(format!("GitHub API 返回 {} ({}): {}", resp.status(), server, resp.text().await.unwrap_or_default()));
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format_upstream_http_error(&format!("GitHub API ({server})"), status, &body));
     }
 
     let commits = resp.json::<Vec<GhCommit>>().await.map_err(|e| format!("解析 commit 响应失败 ({}): {}", server, e))?;
@@ -123,7 +126,9 @@ async fn fetch_file_list(server: &str) -> Result<Vec<String>, String> {
     let resp = builder.send().await.map_err(|e| format!("请求 GitHub API 失败 ({}): {}", server, e))?;
 
     if !resp.status().is_success() {
-        return Err(format!("GitHub API 返回 {} ({})", resp.status(), server));
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format_upstream_http_error(&format!("GitHub API ({server})"), status, &body));
     }
 
     let entries = resp.json::<Vec<GhContentsEntry>>().await.map_err(|e| format!("解析 GitHub API 响应失败 ({}): {}", server, e))?;
@@ -149,7 +154,9 @@ async fn download_file(server: &str, file: &str) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     if !resp.status().is_success() {
-        return Err(format!("HTTP {} for {}", resp.status(), url));
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format_upstream_http_error(&format!("masterdata 下载 {url}"), status, &body));
     }
 
     let bytes = resp.bytes().await.map_err(|e| e.to_string())?;

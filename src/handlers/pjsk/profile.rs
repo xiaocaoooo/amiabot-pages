@@ -10,7 +10,7 @@ use std::env;
 use std::time::Duration;
 use crate::handlers::pjsk::{VALID_SERVERS, SERVER_NAMES};
 use crate::handlers::pjsk::asset_source::download_asset_by_label;
-use crate::handlers::render_html;
+use crate::handlers::{format_upstream_http_error, render_html};
 
 #[derive(Deserialize, Debug)]
 pub struct ProfileQuery {
@@ -84,10 +84,13 @@ pub async fn profile_handler(Query(q): Query<ProfileQuery>) -> impl IntoResponse
                 Error: None,
             }).into_response()
         }
-        Err(e) => render_html("pjsk/profile.html", ProfileResponse {
-            Profile: None,
-            Error: Some(e),
-        }).into_response(),
+        Err(e) => {
+            tracing::error!(error = %e, server = %server, user_id = %user_id, "profile 页面获取失败");
+            render_html("pjsk/profile.html", ProfileResponse {
+                Profile: None,
+                Error: Some(e),
+            }).into_response()
+        },
     }
 }
 
@@ -113,7 +116,10 @@ pub async fn profile_raw_handler(Query(q): Query<ProfileQuery>) -> impl IntoResp
             [(header::CONTENT_TYPE, "application/json; charset=utf-8")],
             bytes,
         ).into_response(),
-        Err(e) => (StatusCode::BAD_GATEWAY, e).into_response(),
+        Err(e) => {
+            tracing::error!(error = %e, server = %server, user_id = %user_id, "profile raw 获取失败");
+            (StatusCode::BAD_GATEWAY, e).into_response()
+        },
     }
 }
 
@@ -136,7 +142,9 @@ async fn fetch_remote_profile(base_url: &str, server: &str, user_id: &str) -> Re
 
     let resp = builder.send().await.map_err(|e| format!("请求 profile 失败: {}", e))?;
     if !resp.status().is_success() {
-        return Err(format!("上游返回 HTTP {}", resp.status()));
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format_upstream_http_error("上游 profile", status, body));
     }
 
     resp.json::<RemoteProfileResponse>().await.map_err(|e| format!("解析 profile JSON 失败: {}", e))
@@ -161,7 +169,9 @@ async fn fetch_remote_profile_bytes(base_url: &str, server: &str, user_id: &str)
 
     let resp = builder.send().await.map_err(|e| format!("请求 profile 失败: {}", e))?;
     if !resp.status().is_success() {
-        return Err(format!("上游返回 HTTP {}", resp.status()));
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format_upstream_http_error("上游 profile", status, body));
     }
 
     resp.bytes().await.map(|b| b.to_vec()).map_err(|e| e.to_string())

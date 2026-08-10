@@ -285,6 +285,9 @@ fn translate_action(action: &str) -> String {
     }
 }
 
+
+pub use crate::pkg::http_error::format_upstream_http_error;
+
 pub fn render_html<S: Serialize>(template_name: &str, ctx: S) -> impl IntoResponse {
     match TEMPLATE_ENV.get_template(template_name) {
         Ok(tmpl) => match tmpl.render(ctx) {

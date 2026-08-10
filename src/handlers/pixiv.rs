@@ -13,7 +13,7 @@ use image::{GenericImageView, ImageFormat};
 use gif::{Frame, Encoder, Repeat};
 use url::Url;
 
-use crate::handlers::render_html;
+use crate::handlers::{render_html, format_upstream_http_error};
 
 const PIXIV_BINARY_CACHE_CONTROL: &str = "public, max-age=86400";
 const PIXIV_UGOIRA_ZIP_MAX_BYTES: u64 = 64 << 20;
@@ -140,7 +140,10 @@ pub async fn illust_media_handler(Query(q): Query<PixivQuery>) -> impl IntoRespo
 
     let illust = match get_pixiv_illust_detail(pid).await {
         Ok(ill) => ill,
-        Err(err) => return (StatusCode::BAD_GATEWAY, err).into_response(),
+        Err(err) => {
+            tracing::warn!(error = %err, "pixiv 上游失败");
+            return (StatusCode::BAD_GATEWAY, err).into_response();
+        },
     };
 
     match build_media_manifest(&illust) {
@@ -179,7 +182,11 @@ pub async fn pixiv_image_proxy_handler(Query(q): Query<PixivQuery>) -> impl Into
     };
 
     if !resp.status().is_success() {
-        return (StatusCode::BAD_GATEWAY, format!("Pixiv 图片下载失败: HTTP {}", resp.status())).into_response();
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        let msg = format_upstream_http_error("Pixiv 图片下载失败", status, &body);
+        tracing::warn!(error = %msg, "pixiv image proxy 失败");
+        return (StatusCode::BAD_GATEWAY, msg).into_response();
     }
 
     let content_type = resp.headers()
@@ -215,7 +222,10 @@ pub async fn pixiv_ugoira_gif_handler(Query(q): Query<PixivQuery>) -> impl IntoR
 
     let metadata = match get_pixiv_ugoira_metadata(pid).await {
         Ok(m) => m,
-        Err(err) => return (StatusCode::BAD_GATEWAY, err).into_response(),
+        Err(err) => {
+            tracing::warn!(error = %err, "pixiv 上游失败");
+            return (StatusCode::BAD_GATEWAY, err).into_response();
+        },
     };
 
     let zip_url = metadata.ugoira_metadata.zip_urls.medium.trim();
@@ -225,12 +235,18 @@ pub async fn pixiv_ugoira_gif_handler(Query(q): Query<PixivQuery>) -> impl IntoR
 
     let zip_data = match download_pixiv_binary(zip_url, PIXIV_UGOIRA_ZIP_MAX_BYTES).await {
         Ok(d) => d,
-        Err(err) => return (StatusCode::BAD_GATEWAY, err).into_response(),
+        Err(err) => {
+            tracing::warn!(error = %err, "pixiv 上游失败");
+            return (StatusCode::BAD_GATEWAY, err).into_response();
+        },
     };
 
     let gif_data = match convert_ugoira_to_gif(&zip_data, &metadata.ugoira_metadata.frames) {
         Ok(g) => g,
-        Err(err) => return (StatusCode::BAD_GATEWAY, err).into_response(),
+        Err(err) => {
+            tracing::warn!(error = %err, "pixiv 上游失败");
+            return (StatusCode::BAD_GATEWAY, err).into_response();
+        },
     };
 
     let mut headers = HeaderMap::new();
@@ -252,7 +268,9 @@ async fn get_pixiv_illust_detail(pid: i32) -> Result<PixivIllust, String> {
         .map_err(|e| e.to_string())?;
 
     if !resp.status().is_success() {
-        return Err(format!("Pixiv API returns {}", resp.status()));
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format_upstream_http_error("Pixiv API", status, &body));
     }
 
     resp.json::<PixivIllust>().await.map_err(|e| e.to_string())
@@ -267,7 +285,9 @@ async fn get_pixiv_ugoira_metadata(pid: i32) -> Result<PixivUgoiraMetadata, Stri
         .map_err(|e| e.to_string())?;
 
     if !resp.status().is_success() {
-        return Err(format!("Pixiv Ugoira API returns {}", resp.status()));
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format_upstream_http_error("Pixiv Ugoira API", status, &body));
     }
 
     resp.json::<PixivUgoiraMetadata>().await.map_err(|e| e.to_string())
@@ -281,7 +301,9 @@ async fn download_pixiv_binary(url: &str, max_bytes: u64) -> Result<Vec<u8>, Str
         .map_err(|e| e.to_string())?;
 
     if !resp.status().is_success() {
-        return Err(format!("Pixiv resource download returns HTTP {}", resp.status()));
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format_upstream_http_error("Pixiv resource download", status, &body));
     }
 
     let body = resp.bytes().await.map_err(|e| e.to_string())?;

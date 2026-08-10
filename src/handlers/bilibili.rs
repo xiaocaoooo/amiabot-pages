@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
 use crate::pkg::imgcache::DEFAULT_IMG_CACHE;
-use crate::handlers::render_html;
+use crate::handlers::{render_html, format_upstream_http_error};
 
 #[derive(Deserialize, Debug)]
 pub struct BilibiliQuery {
@@ -221,20 +221,36 @@ pub async fn video_handler(Query(q): Query<BilibiliQuery>) -> impl IntoResponse 
 
     let resp = match res {
         Ok(r) => r,
-        Err(e) => return render_error(&format!("请求 Bilibili 接口失败: {}", e)).into_response(),
+        Err(e) => {
+            let msg = format!("请求 Bilibili 接口失败: {}", e);
+            tracing::warn!(error = %msg, "bilibili 请求失败");
+            return render_error(&msg).into_response();
+        }
     };
 
     if !resp.status().is_success() {
-        return render_error(&format!("Bilibili 接口返回异常状态码: {}", resp.status())).into_response();
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        let msg = format_upstream_http_error("Bilibili 接口", status, &body);
+        tracing::warn!(error = %msg, "bilibili 上游失败");
+        return render_error(&msg).into_response();
     }
 
     let api_resp = match resp.json::<BiliViewResp>().await {
         Ok(p) => p,
-        Err(e) => return render_error(&format!("解析 Bilibili 返回数据失败: {}", e)).into_response(),
+        Err(e) => {
+        let msg = format!("解析 Bilibili 返回数据失败: {}", e);
+        tracing::warn!(error = %msg, "bilibili 解析失败");
+        return render_error(&msg).into_response();
+    },
     };
 
     if api_resp.code != 0 {
-        return render_error(&format!("Bilibili 接口错误: {} (code={})", api_resp.message, api_resp.code)).into_response();
+        {
+        let msg = format!("Bilibili 接口错误: {} (code={})", api_resp.message, api_resp.code);
+        tracing::warn!(error = %msg, "bilibili 业务错误");
+        return render_error(&msg).into_response();
+    }
     }
 
     let data = match api_resp.data {
