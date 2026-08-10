@@ -87,10 +87,17 @@ struct SuiteUserMusicResult {
 }
 
 #[derive(Deserialize, Debug)]
+struct SuiteUserProfile {
+    name: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
 struct SuiteUserMusicResponse {
     userMusicResults: Vec<SuiteUserMusicResult>,
-    name: Option<String>,
-    updatedAt: Option<i64>,
+    #[serde(default)]
+    userProfile: Option<SuiteUserProfile>,
+    #[serde(default)]
+    upload_time: Option<i64>,
 }
 
 fn diff_name_to_num(diff: &str) -> i32 {
@@ -235,10 +242,18 @@ async fn fetch_suite_music_results(base_url: &str, server: &str, user_id: &str) 
         .build()
         .unwrap_or_default();
 
-    let url = format!("{}/user/{}/musicResults?server={}", base_url.trim_end_matches('/'), user_id, server);
-    
-    // Set headers
-    let mut builder = client.get(&url);
+    // Haruki suite-api: /public/{server}/suite/{user_id}
+    let url = format!(
+        "{}/public/{}/suite/{}",
+        base_url.trim_end_matches('/'),
+        server,
+        user_id
+    );
+
+    let mut builder = client
+        .get(&url)
+        .header("User-Agent", "amiabot-pages/1.0")
+        .header("Accept", "application/json");
     if let Ok(headers_str) = env::var("PJSK_PROFILE_HEADERS") {
         if let Ok(map) = serde_json::from_str::<HashMap<String, String>>(&headers_str) {
             for (k, v) in map {
@@ -247,31 +262,52 @@ async fn fetch_suite_music_results(base_url: &str, server: &str, user_id: &str) 
         }
     }
 
-    let resp = builder.send().await.map_err(|e| format!("请求 profile 接口失败: {}", e))?;
+    let resp = builder
+        .send()
+        .await
+        .map_err(|e| format!("请求 suite-api 失败: {}", e))?;
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        return Err(format_upstream_http_error("B30 suite profile", status, &body));
+        return Err(format_upstream_http_error("B30 suite-api", status, &body));
     }
 
-    let data = resp.json::<SuiteUserMusicResponse>().await.map_err(|e| format!("解析成绩 JSON 失败: {}", e))?;
-    
-    let name = data.name.unwrap_or_else(|| user_id.to_string());
-    let upload_time = data.updatedAt.map(|ts| {
-        if ts < 100_000_000_000 {
-            chrono::NaiveDateTime::from_timestamp_opt(ts, 0)
-        } else {
-            chrono::NaiveDateTime::from_timestamp_opt(ts / 1000, 0)
-        }
+    let data = resp
+        .json::<SuiteUserMusicResponse>()
+        .await
+        .map_err(|e| format!("解析 suite-api 成绩 JSON 失败: {}", e))?;
+
+    if data.userMusicResults.is_empty() {
+        return Err("suite-api 未返回 userMusicResults 数据".to_string());
+    }
+
+    let mut name = data
+        .userProfile
+        .and_then(|p| p.name)
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_default();
+    if name.is_empty() {
+        name = crate::handlers::pjsk::profile::fetch_player_name(server, user_id)
+            .await
+            .unwrap_or_default();
+    }
+    if name.is_empty() {
+        name = "玩家".to_string();
+    }
+
+    let upload_time = data
+        .upload_time
+        .and_then(|ts| {
+            let secs = if ts < 100_000_000_000 { ts } else { ts / 1000 };
+            chrono::NaiveDateTime::from_timestamp_opt(secs, 0)
+        })
         .map(|dt| {
-            let local_dt: chrono::DateTime<chrono::Local> = chrono::DateTime::from_naive_utc_and_offset(
-                dt,
-                *chrono::Local::now().offset()
-            );
+            let local_dt: chrono::DateTime<chrono::Local> =
+                chrono::DateTime::from_naive_utc_and_offset(dt, *chrono::Local::now().offset());
             local_dt.format("%Y-%m-%d %H:%M:%S").to_string()
         })
-        .unwrap_or_default()
-    }).unwrap_or_default();
+        .unwrap_or_default();
 
     Ok((data.userMusicResults, name, upload_time))
 }
