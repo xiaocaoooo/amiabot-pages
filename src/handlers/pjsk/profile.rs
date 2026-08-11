@@ -406,6 +406,17 @@ pub async fn profile_handler(Query(q): Query<ProfileQuery>) -> impl IntoResponse
         .into_response();
     }
 
+    if !user_id.chars().all(|c| c.is_ascii_digit()) {
+        return render_html(
+            "pjsk/profile.html",
+            ProfileResponse {
+                Profile: None,
+                Error: Some("无效的玩家 ID 参数".to_string()),
+            },
+        )
+        .into_response();
+    }
+
     let base_url = match env::var("PJSK_PROFILE_BASEURL") {
         Ok(url) if !url.trim().is_empty() => url,
         _ => {
@@ -467,6 +478,10 @@ pub async fn profile_raw_handler(Query(q): Query<ProfileQuery>) -> impl IntoResp
     let user_id = q.id.unwrap_or_default().trim().to_string();
     if user_id.is_empty() {
         return (StatusCode::BAD_REQUEST, "缺少玩家 ID 参数").into_response();
+    }
+
+    if !user_id.chars().all(|c| c.is_ascii_digit()) {
+        return (StatusCode::BAD_REQUEST, "无效的玩家 ID 参数").into_response();
     }
 
     let base_url = match env::var("PJSK_PROFILE_BASEURL") {
