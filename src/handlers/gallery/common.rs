@@ -219,10 +219,7 @@ fn name_or_alias_eq(gallery: &GalleryDetail, key: &str) -> bool {
     if gallery.name.eq_ignore_ascii_case(key) {
         return true;
     }
-    gallery
-        .aliases
-        .iter()
-        .any(|a| a.eq_ignore_ascii_case(key))
+    gallery.aliases.iter().any(|a| a.eq_ignore_ascii_case(key))
 }
 
 /// 按画廊名或 alias 精确解析（先 search 再精确过滤）。

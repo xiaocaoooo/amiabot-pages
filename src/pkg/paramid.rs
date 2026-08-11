@@ -57,11 +57,15 @@ impl ParamIDMiddleware {
             url_str = parsed.to_string();
         }
 
-        let client = redis::Client::open(url_str).map_err(|e| format!("Valkey client error: {}", e))?;
-        let key_template = env::var("VALKEY_KEY_TEMPLATE")
-            .unwrap_or_else(|_| DEFAULT_KEY_TEMPLATE.to_string());
+        let client =
+            redis::Client::open(url_str).map_err(|e| format!("Valkey client error: {}", e))?;
+        let key_template =
+            env::var("VALKEY_KEY_TEMPLATE").unwrap_or_else(|_| DEFAULT_KEY_TEMPLATE.to_string());
         if !key_template.contains("{id}") {
-            return Err(format!("VALKEY_KEY_TEMPLATE 必须包含 {{id}}: {:?}", key_template));
+            return Err(format!(
+                "VALKEY_KEY_TEMPLATE 必须包含 {{id}}: {:?}",
+                key_template
+            ));
         }
 
         Ok(Self {
@@ -126,7 +130,7 @@ impl ParamIDMiddleware {
 
             // Merge values: request values take priority over injected values
             let mut merged_query = form_urlencoded::Serializer::new(String::new());
-            
+
             // First, write non-param_id request parameters
             for (k, v) in &query_map {
                 if k != QUERY_PARAM_NAME {
@@ -145,15 +149,21 @@ impl ParamIDMiddleware {
 
             let new_query_str = merged_query.finish();
             let mut parts = uri.into_parts();
-            let path = parts.path_and_query.as_ref().map(|pq| pq.path()).unwrap_or("/");
-            
+            let path = parts
+                .path_and_query
+                .as_ref()
+                .map(|pq| pq.path())
+                .unwrap_or("/");
+
             let path_and_query_str = if new_query_str.is_empty() {
                 path.to_string()
             } else {
                 format!("{}?{}", path, new_query_str)
             };
 
-            if let Ok(path_and_query) = axum::http::uri::PathAndQuery::from_maybe_shared(path_and_query_str) {
+            if let Ok(path_and_query) =
+                axum::http::uri::PathAndQuery::from_maybe_shared(path_and_query_str)
+            {
                 parts.path_and_query = Some(path_and_query);
                 if let Ok(new_uri) = Uri::from_parts(parts) {
                     *req.uri_mut() = new_uri;
@@ -199,7 +209,9 @@ fn normalize_value(v: &Value) -> Result<Vec<String>, String> {
                     Value::Bool(b) => list.push(b.to_string()),
                     Value::Number(n) => list.push(n.to_string()),
                     Value::String(s) => list.push(s.clone()),
-                    Value::Array(_) | Value::Object(_) => return Err("Nested array/object not supported".to_string()),
+                    Value::Array(_) | Value::Object(_) => {
+                        return Err("Nested array/object not supported".to_string())
+                    }
                 }
             }
             Ok(list)

@@ -1,14 +1,14 @@
-pub mod assets;
-pub mod asset_source;
 pub mod asset_binary;
+pub mod asset_source;
+pub mod assets;
 pub mod b30;
 pub mod card;
 pub mod event;
 pub mod music;
 pub mod profile;
 
-use std::collections::HashMap;
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
 
 pub static VALID_SERVERS: Lazy<std::collections::HashSet<String>> = Lazy::new(|| {
     let mut s = std::collections::HashSet::new();

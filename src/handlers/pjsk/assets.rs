@@ -1,10 +1,11 @@
 use crate::pkg::http_error::format_upstream_http_error;
 use axum::{
     extract::{Path as AxumPath, Query},
-    response::IntoResponse,
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
+use once_cell::sync::Lazy;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
@@ -13,16 +14,14 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{RwLock, Semaphore};
-use once_cell::sync::Lazy;
 
 use crate::handlers::pjsk::VALID_SERVERS;
 
 const MASTER_DATA_CACHE_DIR: &str = "cache/pjsk";
 const COMMIT_SHA_FILE: &str = ".commit_sha";
 
-pub static COMMIT_SHAS: Lazy<Arc<RwLock<HashMap<String, String>>>> = Lazy::new(|| {
-    Arc::new(RwLock::new(HashMap::new()))
-});
+pub static COMMIT_SHAS: Lazy<Arc<RwLock<HashMap<String, String>>>> =
+    Lazy::new(|| Arc::new(RwLock::new(HashMap::new())));
 
 #[derive(Deserialize, Debug)]
 #[allow(non_snake_case)]
@@ -66,7 +65,11 @@ pub fn server_cache_dir(server: &str) -> PathBuf {
 }
 
 fn remote_url(server: &str, file: &str) -> String {
-    format!("https://sekai-world.github.io/{}/{}", db_diff_name(server), file)
+    format!(
+        "https://sekai-world.github.io/{}/{}",
+        db_diff_name(server),
+        file
+    )
 }
 
 fn github_request(url: &str) -> Result<reqwest::RequestBuilder, String> {
@@ -75,7 +78,8 @@ fn github_request(url: &str) -> Result<reqwest::RequestBuilder, String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    let mut builder = client.get(url)
+    let mut builder = client
+        .get(url)
         .header("User-Agent", "amiabot-pages/1.0")
         .header("Accept", "application/vnd.github.v3+json");
 
@@ -89,18 +93,30 @@ fn github_request(url: &str) -> Result<reqwest::RequestBuilder, String> {
 
 async fn fetch_latest_commit_sha(server: &str) -> Result<String, String> {
     let repo = db_diff_name(server);
-    let url = format!("https://api.github.com/repos/Sekai-World/{}/commits?sha=main&per_page=1", repo);
+    let url = format!(
+        "https://api.github.com/repos/Sekai-World/{}/commits?sha=main&per_page=1",
+        repo
+    );
 
     let builder = github_request(&url)?;
-    let resp = crate::pkg::http_client::send(builder).await.map_err(|e| format!("请求 GitHub API 失败 ({}): {}", server, e))?;
-    
+    let resp = crate::pkg::http_client::send(builder)
+        .await
+        .map_err(|e| format!("请求 GitHub API 失败 ({}): {}", server, e))?;
+
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        return Err(format_upstream_http_error(&format!("GitHub API ({server})"), status, &body));
+        return Err(format_upstream_http_error(
+            &format!("GitHub API ({server})"),
+            status,
+            &body,
+        ));
     }
 
-    let commits = resp.json::<Vec<GhCommit>>().await.map_err(|e| format!("解析 commit 响应失败 ({}): {}", server, e))?;
+    let commits = resp
+        .json::<Vec<GhCommit>>()
+        .await
+        .map_err(|e| format!("解析 commit 响应失败 ({}): {}", server, e))?;
     if commits.is_empty() {
         return Err(format!("未获取到 commit ({})", server));
     }
@@ -126,18 +142,30 @@ async fn save_sha(server: &str, sha: &str) {
 
 async fn fetch_file_list(server: &str) -> Result<Vec<String>, String> {
     let repo = db_diff_name(server);
-    let url = format!("https://api.github.com/repos/Sekai-World/{}/contents/", repo);
+    let url = format!(
+        "https://api.github.com/repos/Sekai-World/{}/contents/",
+        repo
+    );
 
     let builder = github_request(&url)?;
-    let resp = crate::pkg::http_client::send(builder).await.map_err(|e| format!("请求 GitHub API 失败 ({}): {}", server, e))?;
+    let resp = crate::pkg::http_client::send(builder)
+        .await
+        .map_err(|e| format!("请求 GitHub API 失败 ({}): {}", server, e))?;
 
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        return Err(format_upstream_http_error(&format!("GitHub API ({server})"), status, &body));
+        return Err(format_upstream_http_error(
+            &format!("GitHub API ({server})"),
+            status,
+            &body,
+        ));
     }
 
-    let entries = resp.json::<Vec<GhContentsEntry>>().await.map_err(|e| format!("解析 GitHub API 响应失败 ({}): {}", server, e))?;
+    let entries = resp
+        .json::<Vec<GhContentsEntry>>()
+        .await
+        .map_err(|e| format!("解析 GitHub API 响应失败 ({}): {}", server, e))?;
     let mut files = Vec::new();
     for entry in entries {
         if entry.r#type == "file" && entry.name.ends_with(".json") {
@@ -155,15 +183,21 @@ async fn download_file(server: &str, file: &str) -> Result<(), String> {
         .unwrap_or_default();
 
     let resp = crate::pkg::http_client::send(
-        client.get(&url)
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-    ).await
-        .map_err(|e| e.to_string())?;
+        client
+            .get(&url)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"),
+    )
+    .await
+    .map_err(|e| e.to_string())?;
 
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        return Err(format_upstream_http_error(&format!("masterdata 下载 {url}"), status, &body));
+        return Err(format_upstream_http_error(
+            &format!("masterdata 下载 {url}"),
+            status,
+            &body,
+        ));
     }
 
     let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
@@ -173,7 +207,11 @@ async fn download_file(server: &str, file: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub async fn refresh_server(server: &str, max_concurrency: usize, force: bool) -> HashMap<String, String> {
+pub async fn refresh_server(
+    server: &str,
+    max_concurrency: usize,
+    force: bool,
+) -> HashMap<String, String> {
     let mut results = HashMap::new();
 
     let remote_sha = match fetch_latest_commit_sha(server).await {
@@ -194,7 +232,10 @@ pub async fn refresh_server(server: &str, max_concurrency: usize, force: bool) -
 
     if !force {
         let shas = COMMIT_SHAS.read().await;
-        let local_sha = shas.get(server).cloned().unwrap_or_else(|| load_saved_sha(server));
+        let local_sha = shas
+            .get(server)
+            .cloned()
+            .unwrap_or_else(|| load_saved_sha(server));
         drop(shas);
 
         if local_sha == remote_sha {
@@ -206,7 +247,13 @@ pub async fn refresh_server(server: &str, max_concurrency: usize, force: bool) -
                 }
             }
             if missing == 0 {
-                results.insert("_skipped".to_string(), format!("commit SHA 未变化且文件完整: {}", &remote_sha[..12.min(remote_sha.len())]));
+                results.insert(
+                    "_skipped".to_string(),
+                    format!(
+                        "commit SHA 未变化且文件完整: {}",
+                        &remote_sha[..12.min(remote_sha.len())]
+                    ),
+                );
                 return results;
             }
             tracing::info!(
@@ -255,7 +302,10 @@ pub async fn refresh_server(server: &str, max_concurrency: usize, force: bool) -
     }
 
     if has_error {
-        results.insert("_commit".to_string(), "not_saved (存在下载失败的文件)".to_string());
+        results.insert(
+            "_commit".to_string(),
+            "not_saved (存在下载失败的文件)".to_string(),
+        );
     } else {
         save_sha(server, &remote_sha).await;
         results.insert("_commit".to_string(), remote_sha);
@@ -351,7 +401,11 @@ pub async fn master_data_handler(
     } else if dir_name.starts_with("sekai-master-db-") && dir_name.ends_with("-diff") {
         &dir_name["sekai-master-db-".len()..dir_name.len() - "-diff".len()]
     } else {
-        return (StatusCode::BAD_REQUEST, format!("无效的仓库名: {}", dir_name)).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            format!("无效的仓库名: {}", dir_name),
+        )
+            .into_response();
     };
 
     if !VALID_SERVERS.contains(server) {
@@ -361,9 +415,13 @@ pub async fn master_data_handler(
     match read_cached_json(server, file) {
         Ok(data) => (
             StatusCode::OK,
-            [(axum::http::header::CONTENT_TYPE, "application/json; charset=utf-8")],
+            [(
+                axum::http::header::CONTENT_TYPE,
+                "application/json; charset=utf-8",
+            )],
             data,
-        ).into_response(),
+        )
+            .into_response(),
         Err(e) => (StatusCode::NOT_FOUND, e).into_response(),
     }
 }

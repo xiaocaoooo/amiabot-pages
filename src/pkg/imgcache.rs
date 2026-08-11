@@ -1,13 +1,13 @@
+use crate::pkg::http_error::format_upstream_http_error;
+use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
-use once_cell::sync::Lazy;
-use crate::pkg::http_error::format_upstream_http_error;
 
 const DEFAULT_CACHE_DIR: &str = "cache/images";
 const DEFAULT_MAX_SIZE_MB: usize = 512;
@@ -24,7 +24,7 @@ pub struct FileCacheEntry {
     pub url: String,
     pub data_url: String,
     pub created_at: u64, // ms
-    pub ttl_ms: i64,    // ms, -1 means no TTL
+    pub ttl_ms: i64,     // ms, -1 means no TTL
 }
 
 pub struct ImageCache {
@@ -40,8 +40,11 @@ pub static DEFAULT_IMG_CACHE: Lazy<Arc<ImageCache>> = Lazy::new(|| {
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
         .unwrap_or(DEFAULT_MAX_SIZE_MB);
-    
-    Arc::new(ImageCache::new(max_mb * 1024 * 1024, DEFAULT_CACHE_DIR.to_string()))
+
+    Arc::new(ImageCache::new(
+        max_mb * 1024 * 1024,
+        DEFAULT_CACHE_DIR.to_string(),
+    ))
 });
 
 impl ImageCache {
@@ -91,7 +94,7 @@ impl ImageCache {
         }
         let mut items_write = self.items.write().await;
         let mut total_write = self.total_size.write().await;
-        
+
         let entries = match fs::read_dir(path) {
             Ok(e) => e,
             Err(e) => {
@@ -107,7 +110,8 @@ impl ImageCache {
         let mut loaded = 0;
         for entry in entries.flatten() {
             let file_path = entry.path();
-            if file_path.is_file() && file_path.extension().and_then(|s| s.to_str()) == Some("json") {
+            if file_path.is_file() && file_path.extension().and_then(|s| s.to_str()) == Some("json")
+            {
                 let key = match file_path.file_stem().and_then(|s| s.to_str()) {
                     Some(k) => k.to_string(),
                     None => continue,
@@ -119,7 +123,8 @@ impl ImageCache {
                         } else {
                             None
                         };
-                        let created_at = SystemTime::UNIX_EPOCH + Duration::from_millis(entry.created_at);
+                        let created_at =
+                            SystemTime::UNIX_EPOCH + Duration::from_millis(entry.created_at);
                         let meta = CacheMeta {
                             created_at,
                             ttl,
@@ -160,7 +165,8 @@ impl ImageCache {
     fn save_to_file(&self, key: &str, image_url: &str, data_url: &str, meta: &CacheMeta) {
         let _ = fs::create_dir_all(&self.cache_dir);
         let ttl_ms = meta.ttl.map(|d| d.as_millis() as i64).unwrap_or(-1);
-        let created_at_ms = meta.created_at
+        let created_at_ms = meta
+            .created_at
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis() as u64;
@@ -176,7 +182,11 @@ impl ImageCache {
         }
     }
 
-    async fn perform_download(&self, image_url: &str, headers: Option<&HashMap<String, String>>) -> Result<String, String> {
+    async fn perform_download(
+        &self,
+        image_url: &str,
+        headers: Option<&HashMap<String, String>>,
+    ) -> Result<String, String> {
         let mut builder = self.client.get(image_url);
         builder = builder.header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36");
         if let Some(h) = headers {
@@ -185,20 +195,26 @@ impl ImageCache {
             }
         }
 
-        let resp = crate::pkg::http_client::send(builder).await.map_err(|e| format!("HTTP request error: {}", e))?;
+        let resp = crate::pkg::http_client::send(builder)
+            .await
+            .map_err(|e| format!("HTTP request error: {}", e))?;
         if !resp.status().is_success() {
             let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
             return Err(format_upstream_http_error("图片下载", status, &body));
         }
 
-        let content_type = resp.headers()
+        let content_type = resp
+            .headers()
             .get("content-type")
             .and_then(|v| v.to_str().ok())
             .map(|s| s.to_string())
             .unwrap_or_else(|| "image/png".to_string()); // fallback
 
-        let bytes = resp.bytes().await.map_err(|e| format!("Read body error: {}", e))?;
+        let bytes = resp
+            .bytes()
+            .await
+            .map_err(|e| format!("Read body error: {}", e))?;
         if bytes.is_empty() {
             return Err("Empty response".to_string());
         }
@@ -208,7 +224,12 @@ impl ImageCache {
         Ok(format!("data:{};base64,{}", content_type, b64))
     }
 
-    pub async fn download(&self, image_url: &str, ttl: Option<Duration>, headers: Option<&HashMap<String, String>>) -> String {
+    pub async fn download(
+        &self,
+        image_url: &str,
+        ttl: Option<Duration>,
+        headers: Option<&HashMap<String, String>>,
+    ) -> String {
         if image_url.is_empty() {
             return String::new();
         }
@@ -295,7 +316,10 @@ impl ImageCache {
         }
 
         // Evict by LRU (creation time)
-        let mut sorted: Vec<(String, CacheMeta)> = items_write.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+        let mut sorted: Vec<(String, CacheMeta)> = items_write
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
         sorted.sort_by(|a, b| a.1.created_at.cmp(&b.1.created_at));
 
         let mut evicted_count = 0;

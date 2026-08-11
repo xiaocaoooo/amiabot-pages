@@ -1,14 +1,10 @@
-use axum::{
-    extract::Query,
-    response::IntoResponse,
-    http::StatusCode,
-};
-use serde::{Deserialize, Serialize};
-use crate::handlers::pjsk::{VALID_SERVERS, SERVER_NAMES};
 use crate::handlers::pjsk::asset_source::download_asset_by_label;
 use crate::handlers::pjsk::assets::read_cached_json;
-use crate::handlers::pjsk::card::{star_positions};
+use crate::handlers::pjsk::card::star_positions;
+use crate::handlers::pjsk::{SERVER_NAMES, VALID_SERVERS};
 use crate::handlers::render_html;
+use axum::{extract::Query, http::StatusCode, response::IntoResponse};
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
 pub struct EventQuery {
@@ -116,43 +112,82 @@ fn event_progress(start: i64, close: i64) -> f64 {
 pub async fn event_handler(Query(q): Query<EventQuery>) -> impl IntoResponse {
     let server = q.server.unwrap_or_else(|| "jp".to_string());
     if !VALID_SERVERS.contains(&server) {
-        return render_html("pjsk/event.html", EventResponse {
-            Event: None,
-            Error: Some("无效的服务器参数，支持: jp, cn, en, tw, kr".to_string()),
-        }).into_response();
+        return render_html(
+            "pjsk/event.html",
+            EventResponse {
+                Event: None,
+                Error: Some("无效的服务器参数，支持: jp, cn, en, tw, kr".to_string()),
+            },
+        )
+        .into_response();
     }
 
     let event_id_str = q.id.unwrap_or_default().trim().to_string();
     if event_id_str.is_empty() {
-        return render_html("pjsk/event.html", EventResponse {
-            Event: None,
-            Error: Some("缺少活动 ID 参数".to_string()),
-        }).into_response();
+        return render_html(
+            "pjsk/event.html",
+            EventResponse {
+                Event: None,
+                Error: Some("缺少活动 ID 参数".to_string()),
+            },
+        )
+        .into_response();
     }
 
     let event_id: i32 = match event_id_str.parse() {
         Ok(id) if id > 0 => id,
         _ => {
-            return render_html("pjsk/event.html", EventResponse {
-                Event: None,
-                Error: Some("无效的活动 ID".to_string()),
-            }).into_response();
+            return render_html(
+                "pjsk/event.html",
+                EventResponse {
+                    Event: None,
+                    Error: Some("无效的活动 ID".to_string()),
+                },
+            )
+            .into_response();
         }
     };
 
     // Load event masterdata
     let events_data = match read_cached_json(&server, "events.json") {
         Ok(d) => d,
-        Err(e) => return render_html("pjsk/event.html", EventResponse { Event: None, Error: Some(e) }).into_response(),
+        Err(e) => {
+            return render_html(
+                "pjsk/event.html",
+                EventResponse {
+                    Event: None,
+                    Error: Some(e),
+                },
+            )
+            .into_response()
+        }
     };
     let events: Vec<EventEntry> = match serde_json::from_slice(&events_data) {
         Ok(evs) => evs,
-        Err(e) => return render_html("pjsk/event.html", EventResponse { Event: None, Error: Some(format!("解析 events.json 失败: {}", e)) }).into_response(),
+        Err(e) => {
+            return render_html(
+                "pjsk/event.html",
+                EventResponse {
+                    Event: None,
+                    Error: Some(format!("解析 events.json 失败: {}", e)),
+                },
+            )
+            .into_response()
+        }
     };
 
     let target = match events.iter().find(|e| e.id == event_id) {
         Some(e) => e,
-        None => return render_html("pjsk/event.html", EventResponse { Event: None, Error: Some(format!("未找到活动 #{}", event_id)) }).into_response(),
+        None => {
+            return render_html(
+                "pjsk/event.html",
+                EventResponse {
+                    Event: None,
+                    Error: Some(format!("未找到活动 #{}", event_id)),
+                },
+            )
+            .into_response()
+        }
     };
 
     // Parse event type (marathon, cheerful_carnival etc.)
@@ -166,15 +201,19 @@ pub async fn event_handler(Query(q): Query<EventQuery>) -> impl IntoResponse {
     let mut cards = Vec::new();
     if let Ok(deck_data) = read_cached_json(&server, "eventDeckCards.json") {
         if let Ok(deck_cards) = serde_json::from_slice::<Vec<EventCardsEntry>>(&deck_data) {
-            let card_ids: Vec<i32> = deck_cards.iter().filter(|dc| dc.eventId == event_id).map(|dc| dc.cardId).collect();
-            
+            let card_ids: Vec<i32> = deck_cards
+                .iter()
+                .filter(|dc| dc.eventId == event_id)
+                .map(|dc| dc.cardId)
+                .collect();
+
             if let Ok(cards_data) = read_cached_json(&server, "cards.json") {
                 if let Ok(all_cards) = serde_json::from_slice::<Vec<CardEntry>>(&cards_data) {
                     for cid in card_ids {
                         if let Some(c) = all_cards.iter().find(|c| c.id == cid) {
                             let label = format!("card:thumbnail:{}:normal", c.assetbundleName);
                             let thumb = download_asset_by_label(&server, &label).await;
-                            
+
                             let rarity = &c.cardRarityType;
                             let star_icon = if rarity == "rarity_birthday" {
                                 "/static/pjsk/card/rarity_birthday.png".to_string()
@@ -182,21 +221,27 @@ pub async fn event_handler(Query(q): Query<EventQuery>) -> impl IntoResponse {
                                 "/static/pjsk/card/rarity_star_normal.png".to_string()
                             };
 
-                            let frame = format!("/static/pjsk/card/cardFrame_S_{}.png", match rarity.as_str() {
-                                "rarity_1" => "1",
-                                "rarity_2" => "2",
-                                "rarity_3" => "3",
-                                "rarity_4" => "4",
-                                "rarity_birthday" => "bd",
-                                _ => "1",
-                            });
+                            let frame = format!(
+                                "/static/pjsk/card/cardFrame_S_{}.png",
+                                match rarity.as_str() {
+                                    "rarity_1" => "1",
+                                    "rarity_2" => "2",
+                                    "rarity_3" => "3",
+                                    "rarity_4" => "4",
+                                    "rarity_birthday" => "bd",
+                                    _ => "1",
+                                }
+                            );
 
                             cards.push(CardView {
                                 ID: c.id,
                                 Prefix: c.prefix.clone(),
                                 Thumbnail: thumb,
                                 Frame: frame,
-                                AttrIcon: format!("/static/pjsk/card/icon_attribute_{}.png", c.attribute),
+                                AttrIcon: format!(
+                                    "/static/pjsk/card/icon_attribute_{}.png",
+                                    c.attribute
+                                ),
                                 Stars: star_positions(rarity),
                                 StarIcon: star_icon,
                             });
@@ -223,7 +268,10 @@ pub async fn event_handler(Query(q): Query<EventQuery>) -> impl IntoResponse {
         StartAt: format_millis_time(target.startAt),
         AggregateAt: format_millis_time(target.aggregateAt),
         ClosedAt: format_millis_time(target.closedAt),
-        Server: SERVER_NAMES.get(&server).cloned().unwrap_or_else(|| server.to_uppercase()),
+        Server: SERVER_NAMES
+            .get(&server)
+            .cloned()
+            .unwrap_or_else(|| server.to_uppercase()),
         ServerKey: server,
         Banner: banner,
         Logo: logo,
@@ -233,10 +281,14 @@ pub async fn event_handler(Query(q): Query<EventQuery>) -> impl IntoResponse {
         FooterExtra: "Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />".to_string(),
     };
 
-    render_html("pjsk/event.html", EventResponse {
-        Event: Some(page),
-        Error: None,
-    }).into_response()
+    render_html(
+        "pjsk/event.html",
+        EventResponse {
+            Event: Some(page),
+            Error: None,
+        },
+    )
+    .into_response()
 }
 
 pub async fn current_event_handler(Query(q): Query<EventQuery>) -> impl IntoResponse {
@@ -251,17 +303,30 @@ pub async fn current_event_handler(Query(q): Query<EventQuery>) -> impl IntoResp
     };
     let events: Vec<EventEntry> = match serde_json::from_slice(&events_data) {
         Ok(evs) => evs,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, format!("解析 events.json 失败: {}", e)).into_response(),
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("解析 events.json 失败: {}", e),
+            )
+                .into_response()
+        }
     };
 
     let now = chrono::Local::now().timestamp_millis();
-    let current = events.iter().find(|e| now >= e.startAt && now <= e.closedAt);
+    let current = events
+        .iter()
+        .find(|e| now >= e.startAt && now <= e.closedAt);
 
     let redirect_id = match current {
         Some(e) => e.id,
         None => {
             // Find the latest ended event
-            events.iter().filter(|e| now > e.closedAt).max_by_key(|e| e.closedAt).map(|e| e.id).unwrap_or(1)
+            events
+                .iter()
+                .filter(|e| now > e.closedAt)
+                .max_by_key(|e| e.closedAt)
+                .map(|e| e.id)
+                .unwrap_or(1)
         }
     };
 
@@ -269,5 +334,6 @@ pub async fn current_event_handler(Query(q): Query<EventQuery>) -> impl IntoResp
     (
         StatusCode::FOUND,
         [(axum::http::header::LOCATION, redirect_url.as_str())],
-    ).into_response()
+    )
+        .into_response()
 }

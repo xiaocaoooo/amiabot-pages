@@ -1,11 +1,8 @@
-use axum::{
-    extract::Query,
-    response::IntoResponse,
-};
-use serde::{Deserialize, Serialize};
-use crate::pkg::imgcache::DEFAULT_IMG_CACHE;
 use crate::handlers::render_html;
+use crate::pkg::imgcache::DEFAULT_IMG_CACHE;
+use axum::{extract::Query, response::IntoResponse};
 use chrono::Datelike;
+use serde::{Deserialize, Serialize};
 
 const QUERY_TEXT_LIMIT: usize = 180;
 
@@ -242,7 +239,9 @@ fn humanize_online_status(status: i32, ext_status: i32) -> String {
         (50, "忙碌"),
         (60, "Q我吧"),
         (70, "请勿打扰"),
-    ].into_iter().collect();
+    ]
+    .into_iter()
+    .collect();
 
     let ext_map: std::collections::HashMap<i32, &str> = [
         (1000, "我的电量"),
@@ -280,7 +279,9 @@ fn humanize_online_status(status: i32, ext_status: i32) -> String {
         (2025, "一起元梦"),
         (2026, "求星搭子"),
         (2037, "春日限定"),
-    ].into_iter().collect();
+    ]
+    .into_iter()
+    .collect();
 
     if let Some(&label) = ext_map.get(&ext_status) {
         return label.to_string();
@@ -316,7 +317,12 @@ fn item_if_diff(label: &str, value: &str, diff_to: &str) -> DisplayItem {
     }
 }
 
-fn append_section(mut sections: Vec<DisplaySection>, title: &str, grid: &str, items: Vec<DisplayItem>) -> Vec<DisplaySection> {
+fn append_section(
+    mut sections: Vec<DisplaySection>,
+    title: &str,
+    grid: &str,
+    items: Vec<DisplayItem>,
+) -> Vec<DisplaySection> {
     let mut filtered = Vec::new();
     for it in items {
         if !it.Label.trim().is_empty() && !it.Value.trim().is_empty() {
@@ -340,16 +346,24 @@ fn qq_avatar_url(id: &str) -> String {
 pub async fn user_handler(Query(q): Query<QueryParams>) -> impl IntoResponse {
     let id = q.id.unwrap_or_default().trim().to_string();
     if id.is_empty() {
-        return render_html("query/user.html", UserResponse {
-            User: None,
-            Error: Some("缺少用户 ID 参数".to_string()),
-        }).into_response();
+        return render_html(
+            "query/user.html",
+            UserResponse {
+                User: None,
+                Error: Some("缺少用户 ID 参数".to_string()),
+            },
+        )
+        .into_response();
     }
     if !is_digits(&id) {
-        return render_html("query/user.html", UserResponse {
-            User: None,
-            Error: Some("无效的用户 ID".to_string()),
-        }).into_response();
+        return render_html(
+            "query/user.html",
+            UserResponse {
+                User: None,
+                Error: Some("无效的用户 ID".to_string()),
+            },
+        )
+        .into_response();
     }
 
     let reg_year_str = q.reg_year.clone().unwrap_or_default();
@@ -363,49 +377,95 @@ pub async fn user_handler(Query(q): Query<QueryParams>) -> impl IntoResponse {
     let vip_text = humanize_vip(
         &q.is_vip.unwrap_or_default(),
         &q.is_years_vip.unwrap_or_default(),
-        parse_positive_int(&q.vip_level.unwrap_or_default())
+        parse_positive_int(&q.vip_level.unwrap_or_default()),
     );
     let online_text = humanize_online_status(
         parse_positive_int(&q.online_status.unwrap_or_default()),
-        parse_positive_int(&q.online_ext_status.unwrap_or_default())
+        parse_positive_int(&q.online_ext_status.unwrap_or_default()),
     );
 
     let mut sections = Vec::new();
-    sections = append_section(sections, "身份标识", "repeat(2, minmax(0, 1fr))", vec![
-        item("昵称", &first_non_empty(&[&nickname, &id])),
-        item_if_diff("备注", &q.remark.unwrap_or_default(), &nickname),
-        item("QID", &q.qid.unwrap_or_default()),
-        item("分组名称", &q.category_name.unwrap_or_default()),
-        item("分组 ID", &q.category_id.unwrap_or_default()),
-    ]);
+    sections = append_section(
+        sections,
+        "身份标识",
+        "repeat(2, minmax(0, 1fr))",
+        vec![
+            item("昵称", &first_non_empty(&[&nickname, &id])),
+            item_if_diff("备注", &q.remark.unwrap_or_default(), &nickname),
+            item("QID", &q.qid.unwrap_or_default()),
+            item("分组名称", &q.category_name.unwrap_or_default()),
+            item("分组 ID", &q.category_id.unwrap_or_default()),
+        ],
+    );
 
-    sections = append_section(sections, "基础资料", "repeat(3, minmax(0, 1fr))", vec![
-        item("性别", humanize_sex(&q.sex.unwrap_or_default())),
-        item("年龄", &humanize_int(parse_positive_int(&q.age.unwrap_or_default()), "未知", " 岁")),
-        item("Q龄", &first_non_empty(&[&q.qage.unwrap_or_default(), &humanize_q_age(reg_year)])),
-        item("注册年份", &humanize_int(reg_year, "未知", " 年注册")),
-        item("QQ 等级", &humanize_int(parse_positive_int(&q.qq_level.unwrap_or_default()), "未知", " 级")),
-        item("生日", &q.birthday.unwrap_or_default()),
-        item("手机号", &q.phone_num.unwrap_or_default()),
-        item("邮箱", &q.email.unwrap_or_default()),
-    ]);
+    sections = append_section(
+        sections,
+        "基础资料",
+        "repeat(3, minmax(0, 1fr))",
+        vec![
+            item("性别", humanize_sex(&q.sex.unwrap_or_default())),
+            item(
+                "年龄",
+                &humanize_int(
+                    parse_positive_int(&q.age.unwrap_or_default()),
+                    "未知",
+                    " 岁",
+                ),
+            ),
+            item(
+                "Q龄",
+                &first_non_empty(&[&q.qage.unwrap_or_default(), &humanize_q_age(reg_year)]),
+            ),
+            item("注册年份", &humanize_int(reg_year, "未知", " 年注册")),
+            item(
+                "QQ 等级",
+                &humanize_int(
+                    parse_positive_int(&q.qq_level.unwrap_or_default()),
+                    "未知",
+                    " 级",
+                ),
+            ),
+            item("生日", &q.birthday.unwrap_or_default()),
+            item("手机号", &q.phone_num.unwrap_or_default()),
+            item("邮箱", &q.email.unwrap_or_default()),
+        ],
+    );
 
-    sections = append_section(sections, "群内信息", "repeat(3, minmax(0, 1fr))", vec![
-        item("群名片", &non_empty_or(&card_str, "未设置")),
-        item("群等级", &non_empty_or(&q.group_level.unwrap_or_default(), "未提供")),
-        item("地区", &non_empty_or(&q.area.unwrap_or_default(), "未提供")),
-        item("是否机器人", humanize_optional_bool(&q.is_robot.unwrap_or_default())),
-        item("不良记录", humanize_optional_bool(&q.unfriendly.unwrap_or_default())),
-    ]);
+    sections = append_section(
+        sections,
+        "群内信息",
+        "repeat(3, minmax(0, 1fr))",
+        vec![
+            item("群名片", &non_empty_or(&card_str, "未设置")),
+            item(
+                "群等级",
+                &non_empty_or(&q.group_level.unwrap_or_default(), "未提供"),
+            ),
+            item("地区", &non_empty_or(&q.area.unwrap_or_default(), "未提供")),
+            item(
+                "是否机器人",
+                humanize_optional_bool(&q.is_robot.unwrap_or_default()),
+            ),
+            item(
+                "不良记录",
+                humanize_optional_bool(&q.unfriendly.unwrap_or_default()),
+            ),
+        ],
+    );
 
-    sections = append_section(sections, "群内信息", "repeat(2, minmax(0, 1fr))", vec![
-        item("在线状态", &non_empty_or(&online_text, "未提供")),
-        item("角色", role_text),
-        item("入群时间", &q.join_time.unwrap_or_default()),
-        item("最后发言", &q.last_sent_time.unwrap_or_default()),
-        item("禁言至", &q.mute_until.unwrap_or_default()),
-        item("头衔到期", &q.title_expire_time.unwrap_or_default()),
-    ]);
+    sections = append_section(
+        sections,
+        "群内信息",
+        "repeat(2, minmax(0, 1fr))",
+        vec![
+            item("在线状态", &non_empty_or(&online_text, "未提供")),
+            item("角色", role_text),
+            item("入群时间", &q.join_time.unwrap_or_default()),
+            item("最后发言", &q.last_sent_time.unwrap_or_default()),
+            item("禁言至", &q.mute_until.unwrap_or_default()),
+            item("头衔到期", &q.title_expire_time.unwrap_or_default()),
+        ],
+    );
 
     let mut text_blocks = Vec::new();
     let long_nick = clamp_text(&q.long_nick.unwrap_or_default(), QUERY_TEXT_LIMIT);
@@ -442,15 +502,23 @@ pub async fn user_handler(Query(q): Query<QueryParams>) -> impl IntoResponse {
         TextBlocks: text_blocks,
     };
 
-    render_html("query/user.html", UserResponse {
-        User: Some(data),
-        Error: None,
-    }).into_response()
+    render_html(
+        "query/user.html",
+        UserResponse {
+            User: Some(data),
+            Error: None,
+        },
+    )
+    .into_response()
 }
 
 pub async fn group_handler(Query(_q): Query<QueryParams>) -> impl IntoResponse {
-    render_html("query/group.html", GroupResponse {
-        Group: None,
-        Error: Some("Group handler not fully active".to_string()),
-    }).into_response()
+    render_html(
+        "query/group.html",
+        GroupResponse {
+            Group: None,
+            Error: Some("Group handler not fully active".to_string()),
+        },
+    )
+    .into_response()
 }

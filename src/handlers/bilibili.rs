@@ -1,12 +1,9 @@
-use axum::{
-    extract::Query,
-    response::IntoResponse,
-};
+use crate::handlers::{format_upstream_http_error, render_html};
+use crate::pkg::imgcache::DEFAULT_IMG_CACHE;
+use axum::{extract::Query, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use crate::pkg::imgcache::DEFAULT_IMG_CACHE;
-use crate::handlers::{render_html, format_upstream_http_error};
 
 #[derive(Deserialize, Debug)]
 pub struct BilibiliQuery {
@@ -127,32 +124,35 @@ fn format_unix_time(ts: i64) -> String {
 }
 
 fn render_error(msg: &str) -> impl IntoResponse {
-    render_html("bilibili/video.html", BilibiliPageData {
-        Title: String::new(),
-        BVID: String::new(),
-        AID: 0,
-        Cover: String::new(),
-        UpperName: String::new(),
-        UpperFace: String::new(),
-        Play: String::new(),
-        Like: String::new(),
-        Coin: String::new(),
-        Favorite: String::new(),
-        Danmaku: String::new(),
-        Reply: String::new(),
-        Share: String::new(),
-        Duration: String::new(),
-        PublishTime: String::new(),
-        UploadTime: String::new(),
-        ShowUploadTime: false,
-        Intro: String::new(),
-        Pages: Vec::new(),
-        TotalPages: 0,
-        HasMorePages: false,
-        RemainingPageCount: 0,
-        FooterExtra: String::new(),
-        Error: Some(msg.to_string()),
-    })
+    render_html(
+        "bilibili/video.html",
+        BilibiliPageData {
+            Title: String::new(),
+            BVID: String::new(),
+            AID: 0,
+            Cover: String::new(),
+            UpperName: String::new(),
+            UpperFace: String::new(),
+            Play: String::new(),
+            Like: String::new(),
+            Coin: String::new(),
+            Favorite: String::new(),
+            Danmaku: String::new(),
+            Reply: String::new(),
+            Share: String::new(),
+            Duration: String::new(),
+            PublishTime: String::new(),
+            UploadTime: String::new(),
+            ShowUploadTime: false,
+            Intro: String::new(),
+            Pages: Vec::new(),
+            TotalPages: 0,
+            HasMorePages: false,
+            RemainingPageCount: 0,
+            FooterExtra: String::new(),
+            Error: Some(msg.to_string()),
+        },
+    )
 }
 
 fn render_default_video() -> impl IntoResponse {
@@ -187,7 +187,7 @@ fn render_default_video() -> impl IntoResponse {
 pub async fn video_handler(Query(q): Query<BilibiliQuery>) -> impl IntoResponse {
     let bv = q.bv.or(q.bvid);
     let av = q.av.or(q.aid).or(q.avid);
-    
+
     if bv.is_none() && av.is_none() {
         return render_default_video().into_response();
     }
@@ -230,18 +230,21 @@ pub async fn video_handler(Query(q): Query<BilibiliQuery>) -> impl IntoResponse 
     let api_resp = match resp.json::<BiliViewResp>().await {
         Ok(p) => p,
         Err(e) => {
-        let msg = format!("解析 Bilibili 返回数据失败: {}", e);
-        tracing::warn!(error = %msg, "bilibili 解析失败");
-        return render_error(&msg).into_response();
-    },
+            let msg = format!("解析 Bilibili 返回数据失败: {}", e);
+            tracing::warn!(error = %msg, "bilibili 解析失败");
+            return render_error(&msg).into_response();
+        }
     };
 
     if api_resp.code != 0 {
         {
-        let msg = format!("Bilibili 接口错误: {} (code={})", api_resp.message, api_resp.code);
-        tracing::warn!(error = %msg, "bilibili 业务错误");
-        return render_error(&msg).into_response();
-    }
+            let msg = format!(
+                "Bilibili 接口错误: {} (code={})",
+                api_resp.message, api_resp.code
+            );
+            tracing::warn!(error = %msg, "bilibili 业务错误");
+            return render_error(&msg).into_response();
+        }
     }
 
     let data = match api_resp.data {
@@ -262,10 +265,17 @@ pub async fn video_handler(Query(q): Query<BilibiliQuery>) -> impl IntoResponse 
     }
 
     let mut headers = HashMap::new();
-    headers.insert("Referer".to_string(), "https://www.bilibili.com/".to_string());
-    
-    let cover_data_url = DEFAULT_IMG_CACHE.download(&data.pic, None, Some(&headers)).await;
-    let upper_face_data_url = DEFAULT_IMG_CACHE.download(&data.owner.face, None, Some(&headers)).await;
+    headers.insert(
+        "Referer".to_string(),
+        "https://www.bilibili.com/".to_string(),
+    );
+
+    let cover_data_url = DEFAULT_IMG_CACHE
+        .download(&data.pic, None, Some(&headers))
+        .await;
+    let upper_face_data_url = DEFAULT_IMG_CACHE
+        .download(&data.owner.face, None, Some(&headers))
+        .await;
 
     let publish_time = format_unix_time(data.pubdate);
     let upload_time = format_unix_time(data.ctime);
@@ -276,30 +286,34 @@ pub async fn video_handler(Query(q): Query<BilibiliQuery>) -> impl IntoResponse 
         show_upload_time = delta >= 30 * 60;
     }
 
-    render_html("bilibili/video.html", BilibiliPageData {
-        Title: data.title,
-        BVID: data.bvid,
-        AID: data.aid,
-        Cover: cover_data_url,
-        UpperName: data.owner.name,
-        UpperFace: upper_face_data_url,
-        Play: format_count(data.stat.view),
-        Like: format_count(data.stat.like),
-        Coin: format_count(data.stat.coin),
-        Favorite: format_count(data.stat.favorite),
-        Danmaku: format_count(data.stat.danmaku),
-        Reply: format_count(data.stat.reply),
-        Share: format_count(data.stat.share),
-        Duration: format_duration(data.duration),
-        PublishTime: publish_time,
-        UploadTime: upload_time,
-        ShowUploadTime: show_upload_time,
-        Intro: data.desc,
-        Pages: pages,
-        TotalPages: data.pages.len(),
-        HasMorePages: data.pages.len() > 8,
-        RemainingPageCount: data.pages.len().saturating_sub(8),
-        FooterExtra: String::new(),
-        Error: None,
-    }).into_response()
+    render_html(
+        "bilibili/video.html",
+        BilibiliPageData {
+            Title: data.title,
+            BVID: data.bvid,
+            AID: data.aid,
+            Cover: cover_data_url,
+            UpperName: data.owner.name,
+            UpperFace: upper_face_data_url,
+            Play: format_count(data.stat.view),
+            Like: format_count(data.stat.like),
+            Coin: format_count(data.stat.coin),
+            Favorite: format_count(data.stat.favorite),
+            Danmaku: format_count(data.stat.danmaku),
+            Reply: format_count(data.stat.reply),
+            Share: format_count(data.stat.share),
+            Duration: format_duration(data.duration),
+            PublishTime: publish_time,
+            UploadTime: upload_time,
+            ShowUploadTime: show_upload_time,
+            Intro: data.desc,
+            Pages: pages,
+            TotalPages: data.pages.len(),
+            HasMorePages: data.pages.len() > 8,
+            RemainingPageCount: data.pages.len().saturating_sub(8),
+            FooterExtra: String::new(),
+            Error: None,
+        },
+    )
+    .into_response()
 }

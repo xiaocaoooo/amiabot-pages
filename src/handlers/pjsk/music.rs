@@ -1,12 +1,9 @@
-use axum::{
-    extract::Query,
-    response::IntoResponse,
-};
-use serde::{Deserialize, Serialize};
-use crate::handlers::pjsk::{VALID_SERVERS, SERVER_NAMES};
 use crate::handlers::pjsk::asset_source::download_asset_by_label;
 use crate::handlers::pjsk::assets::read_cached_json;
+use crate::handlers::pjsk::{SERVER_NAMES, VALID_SERVERS};
 use crate::handlers::render_html;
+use axum::{extract::Query, response::IntoResponse};
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
 pub struct MusicQuery {
@@ -102,70 +99,131 @@ fn format_millis_time(ms: i64) -> String {
 pub async fn music_handler(Query(q): Query<MusicQuery>) -> impl IntoResponse {
     let server = q.server.unwrap_or_else(|| "jp".to_string());
     if !VALID_SERVERS.contains(&server) {
-        return render_html("pjsk/music.html", MusicResponse {
-            Music: None,
-            Error: Some("无效的服务器参数，支持: jp, cn, en, tw, kr".to_string()),
-        }).into_response();
+        return render_html(
+            "pjsk/music.html",
+            MusicResponse {
+                Music: None,
+                Error: Some("无效的服务器参数，支持: jp, cn, en, tw, kr".to_string()),
+            },
+        )
+        .into_response();
     }
 
     let music_id_str = q.id.unwrap_or_default().trim().to_string();
     if music_id_str.is_empty() {
-        return render_html("pjsk/music.html", MusicResponse {
-            Music: None,
-            Error: Some("缺少音乐 ID 参数".to_string()),
-        }).into_response();
+        return render_html(
+            "pjsk/music.html",
+            MusicResponse {
+                Music: None,
+                Error: Some("缺少音乐 ID 参数".to_string()),
+            },
+        )
+        .into_response();
     }
 
     let music_id: i32 = match music_id_str.parse() {
         Ok(id) if id > 0 => id,
         _ => {
-            return render_html("pjsk/music.html", MusicResponse {
-                Music: None,
-                Error: Some("无效的音乐 ID".to_string()),
-            }).into_response();
+            return render_html(
+                "pjsk/music.html",
+                MusicResponse {
+                    Music: None,
+                    Error: Some("无效的音乐 ID".to_string()),
+                },
+            )
+            .into_response();
         }
     };
 
     // Load music masterdata
     let musics_data = match read_cached_json(&server, "musics.json") {
         Ok(d) => d,
-        Err(e) => return render_html("pjsk/music.html", MusicResponse { Music: None, Error: Some(e) }).into_response(),
+        Err(e) => {
+            return render_html(
+                "pjsk/music.html",
+                MusicResponse {
+                    Music: None,
+                    Error: Some(e),
+                },
+            )
+            .into_response()
+        }
     };
     let musics: Vec<MusicEntry> = match serde_json::from_slice(&musics_data) {
         Ok(m) => m,
-        Err(e) => return render_html("pjsk/music.html", MusicResponse { Music: None, Error: Some(format!("解析 musics.json 失败: {}", e)) }).into_response(),
+        Err(e) => {
+            return render_html(
+                "pjsk/music.html",
+                MusicResponse {
+                    Music: None,
+                    Error: Some(format!("解析 musics.json 失败: {}", e)),
+                },
+            )
+            .into_response()
+        }
     };
 
     let target = match musics.iter().find(|m| m.id == music_id) {
         Some(m) => m,
-        None => return render_html("pjsk/music.html", MusicResponse { Music: None, Error: Some(format!("未找到音乐 #{}", music_id)) }).into_response(),
+        None => {
+            return render_html(
+                "pjsk/music.html",
+                MusicResponse {
+                    Music: None,
+                    Error: Some(format!("未找到音乐 #{}", music_id)),
+                },
+            )
+            .into_response()
+        }
     };
 
     // Load music difficulties
     let diffs_data = match read_cached_json(&server, "musicDifficulties.json") {
         Ok(d) => d,
-        Err(e) => return render_html("pjsk/music.html", MusicResponse { Music: None, Error: Some(e) }).into_response(),
+        Err(e) => {
+            return render_html(
+                "pjsk/music.html",
+                MusicResponse {
+                    Music: None,
+                    Error: Some(e),
+                },
+            )
+            .into_response()
+        }
     };
     let all_diffs: Vec<MusicDifficultyEntry> = match serde_json::from_slice(&diffs_data) {
         Ok(d) => d,
-        Err(e) => return render_html("pjsk/music.html", MusicResponse { Music: None, Error: Some(format!("解析 musicDifficulties.json 失败: {}", e)) }).into_response(),
-    };
-    let difficulties: Vec<DifficultyInfo> = all_diffs.iter().filter(|d| d.musicId == music_id).map(|d| {
-        let label = match d.musicDifficulty.as_str() {
-            "easy" => "EASY",
-            "normal" => "NORMAL",
-            "hard" => "HARD",
-            "expert" => "EXPERT",
-            "master" => "MASTER",
-            "append" => "APPEND",
-            other => other,
-        };
-        DifficultyInfo {
-            DifficultyType: label.to_string(),
-            PlayLevel: d.playLevel,
-            NoteCount: d.noteCount,
+        Err(e) => {
+            return render_html(
+                "pjsk/music.html",
+                MusicResponse {
+                    Music: None,
+                    Error: Some(format!("解析 musicDifficulties.json 失败: {}", e)),
+                },
+            )
+            .into_response()
         }
-    }).collect();
+    };
+    let difficulties: Vec<DifficultyInfo> = all_diffs
+        .iter()
+        .filter(|d| d.musicId == music_id)
+        .map(|d| {
+            let label = match d.musicDifficulty.as_str() {
+                "easy" => "EASY",
+                "normal" => "NORMAL",
+                "hard" => "HARD",
+                "expert" => "EXPERT",
+                "master" => "MASTER",
+                "append" => "APPEND",
+                other => other,
+            };
+            DifficultyInfo {
+                DifficultyType: label.to_string(),
+                PlayLevel: d.playLevel,
+                NoteCount: d.noteCount,
+            }
+        })
+        .collect();
 
     // Load vocalists
     let mut vocalists = Vec::new();
@@ -203,7 +261,10 @@ pub async fn music_handler(Query(q): Query<MusicQuery>) -> impl IntoResponse {
         Composer: target.composer.clone(),
         Arranger: target.arranger.clone(),
         PublishAt: format_millis_time(target.publishedAt),
-        Server: SERVER_NAMES.get(&server).cloned().unwrap_or_else(|| server.to_uppercase()),
+        Server: SERVER_NAMES
+            .get(&server)
+            .cloned()
+            .unwrap_or_else(|| server.to_uppercase()),
         ServerKey: server,
         Jacket: jacket,
         Vocalists: vocalists,
@@ -212,8 +273,12 @@ pub async fn music_handler(Query(q): Query<MusicQuery>) -> impl IntoResponse {
         FooterExtra: "Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />".to_string(),
     };
 
-    render_html("pjsk/music.html", MusicResponse {
-        Music: Some(detail),
-        Error: None,
-    }).into_response()
+    render_html(
+        "pjsk/music.html",
+        MusicResponse {
+            Music: Some(detail),
+            Error: None,
+        },
+    )
+    .into_response()
 }

@@ -1,12 +1,9 @@
-use axum::{
-    http::HeaderMap,
-    response::IntoResponse,
-};
+use crate::handlers::render_html;
+use crate::pkg::imgcache::DEFAULT_IMG_CACHE;
+use axum::{http::HeaderMap, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::time::Duration;
-use crate::pkg::imgcache::DEFAULT_IMG_CACHE;
-use crate::handlers::render_html;
 
 const ZEABUR_GRAPHQL_ENDPOINT: &str = "https://api.zeabur.com/graphql";
 
@@ -189,7 +186,10 @@ fn resolve_zeabur_token(headers: &HeaderMap) -> String {
         }
         return auth_header.to_string();
     }
-    env::var("ZEABUR_TOKEN").unwrap_or_default().trim().to_string()
+    env::var("ZEABUR_TOKEN")
+        .unwrap_or_default()
+        .trim()
+        .to_string()
 }
 
 fn format_ratio(used: f64, total: f64) -> String {
@@ -254,7 +254,11 @@ async fn build_zeabur_status_page(data: ZeaburStatusData) -> ZeaburStatusPageDat
 
         for svc in node.services {
             let status = svc.status.trim().to_uppercase();
-            let status = if status.is_empty() { "UNKNOWN".to_string() } else { status };
+            let status = if status.is_empty() {
+                "UNKNOWN".to_string()
+            } else {
+                status
+            };
             if status == "RUNNING" {
                 proj_view.RunningCount += 1;
             }
@@ -272,10 +276,13 @@ async fn build_zeabur_status_page(data: ZeaburStatusData) -> ZeaburStatusPageDat
 }
 
 fn render_zeabur_error(msg: &str) -> impl IntoResponse {
-    render_html("status/zeabur.html", ZeaburResponse {
-        Status: None,
-        Error: Some(msg.to_string()),
-    })
+    render_html(
+        "status/zeabur.html",
+        ZeaburResponse {
+            Status: None,
+            Error: Some(msg.to_string()),
+        },
+    )
 }
 
 pub async fn zeabur_page_handler(headers: HeaderMap) -> impl IntoResponse {
@@ -292,12 +299,14 @@ pub async fn zeabur_page_handler(headers: HeaderMap) -> impl IntoResponse {
     let request_payload = serde_json::json!({ "query": ZEABUR_STATUS_QUERY });
 
     let resp = match crate::pkg::http_client::send(
-        client.post(ZEABUR_GRAPHQL_ENDPOINT)
+        client
+            .post(ZEABUR_GRAPHQL_ENDPOINT)
             .header("Authorization", format!("Bearer {}", token))
             .header("Content-Type", "application/json")
             .header("X-Request-Type", "GraphQL")
-            .json(&request_payload)
-    ).await
+            .json(&request_payload),
+    )
+    .await
     {
         Ok(r) => r,
         Err(e) => return render_zeabur_error(&format!("请求 Zeabur 失败: {}", e)).into_response(),
@@ -307,17 +316,29 @@ pub async fn zeabur_page_handler(headers: HeaderMap) -> impl IntoResponse {
     let body_text = resp.text().await.unwrap_or_default();
 
     if !status_code.is_success() {
-        return render_zeabur_error(&format!("Zeabur API 返回异常状态码: {}\n{}", status_code, body_text.trim())).into_response();
+        return render_zeabur_error(&format!(
+            "Zeabur API 返回异常状态码: {}\n{}",
+            status_code,
+            body_text.trim()
+        ))
+        .into_response();
     }
 
     let payload: ZeaburGraphQLResponse = match serde_json::from_str(&body_text) {
         Ok(p) => p,
-        Err(e) => return render_zeabur_error(&format!("解析 Zeabur 响应失败: {}\nResponse: {}", e, body_text)).into_response(),
+        Err(e) => {
+            return render_zeabur_error(&format!(
+                "解析 Zeabur 响应失败: {}\nResponse: {}",
+                e, body_text
+            ))
+            .into_response()
+        }
     };
 
     if let Some(errs) = payload.errors {
         if !errs.is_empty() && payload.data.is_none() {
-            return render_zeabur_error(&format!("Zeabur GraphQL 返回错误: {}", errs[0].message)).into_response();
+            return render_zeabur_error(&format!("Zeabur GraphQL 返回错误: {}", errs[0].message))
+                .into_response();
         }
     }
 
@@ -327,8 +348,12 @@ pub async fn zeabur_page_handler(headers: HeaderMap) -> impl IntoResponse {
     };
 
     let page_data = build_zeabur_status_page(data).await;
-    render_html("status/zeabur.html", ZeaburResponse {
-        Status: Some(page_data),
-        Error: None,
-    }).into_response()
+    render_html(
+        "status/zeabur.html",
+        ZeaburResponse {
+            Status: Some(page_data),
+            Error: None,
+        },
+    )
+    .into_response()
 }

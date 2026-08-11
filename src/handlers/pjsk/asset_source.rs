@@ -1,9 +1,9 @@
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
-use once_cell::sync::Lazy;
 
 use crate::pkg::imgcache::DEFAULT_IMG_CACHE;
 
@@ -14,7 +14,6 @@ pub enum SekaiAssetSource {
     Haruki,
 }
 
-
 const ASSET_RETRY_ROUNDS: usize = 2;
 
 static DEFAULT_SEKAI_ASSET_SOURCES: &[SekaiAssetSource] = &[
@@ -23,67 +22,85 @@ static DEFAULT_SEKAI_ASSET_SOURCES: &[SekaiAssetSource] = &[
     SekaiAssetSource::Haruki,
 ];
 
-pub static ASSET_LABEL_PATH_TEMPLATES: Lazy<HashMap<&'static str, Vec<&'static str>>> = Lazy::new(|| {
-    let mut m = HashMap::new();
-    m.insert("event:background", vec![
-        "ondemand/event/{assetbundle}/screen/bg.png",
-        "ondemand/event/{assetbundle}/screen/bg.webp",
-        "event/{assetbundle}/screen/bg.png",
-        "event/{assetbundle}/screen/bg.webp",
-    ]);
-    m.insert("event:logo", vec![
-        "ondemand/event/{assetbundle}/logo/logo.png",
-        "ondemand/event/{assetbundle}/logo/logo.webp",
-        "event/{assetbundle}/logo/logo.png",
-        "event/{assetbundle}/logo/logo.webp",
-    ]);
-    m.insert("event:banner", vec![
-        "ondemand/event_story/{assetbundle}/screen_image/banner_event_story.png",
-        "ondemand/event_story/{assetbundle}/screen_image/banner_event_story.webp",
-        "event_story/{assetbundle}/screen_image/banner_event_story.png",
-        "event_story/{assetbundle}/screen_image/banner_event_story.webp",
-        "ondemand/event/{assetbundle}/logo/logo.png",
-        "ondemand/event/{assetbundle}/logo/logo.webp",
-        "event/{assetbundle}/logo/logo.png",
-        "event/{assetbundle}/logo/logo.webp",
-        "ondemand/event/{assetbundle}/screen/bg.png",
-        "ondemand/event/{assetbundle}/screen/bg.webp",
-        "event/{assetbundle}/screen/bg.png",
-        "event/{assetbundle}/screen/bg.webp",
-        "ondemand/home/banner/{assetbundle}/{assetbundle}.png",
-        "ondemand/home/banner/{assetbundle}/{assetbundle}.webp",
-        "home/banner/{assetbundle}/{assetbundle}.png",
-        "home/banner/{assetbundle}/{assetbundle}.webp",
-    ]);
-    m.insert("card:thumbnail", vec![
-        "startapp/thumbnail/chara/{assetbundle}_{status}.png",
-        "startapp/thumbnail/chara/{assetbundle}_{status}.webp",
-        "thumbnail/chara/{assetbundle}_{status}.png",
-        "thumbnail/chara/{assetbundle}_{status}.webp",
-    ]);
-    m.insert("card:image", vec![
-        "startapp/character/member/{assetbundle}/{card_file}.png",
-        "startapp/character/member/{assetbundle}/{card_file}.webp",
-        "character/member/{assetbundle}/{card_file}.png",
-        "character/member/{assetbundle}/{card_file}.webp",
-    ]);
-    m.insert("music:jacket", vec![
-        "startapp/music/jacket/{assetbundle}/{assetbundle}.png",
-        "startapp/music/jacket/{assetbundle}/{assetbundle}.webp",
-        "music/jacket/{assetbundle}/{assetbundle}.png",
-        "music/jacket/{assetbundle}/{assetbundle}.webp",
-    ]);
-    m
-});
+pub static ASSET_LABEL_PATH_TEMPLATES: Lazy<HashMap<&'static str, Vec<&'static str>>> =
+    Lazy::new(|| {
+        let mut m = HashMap::new();
+        m.insert(
+            "event:background",
+            vec![
+                "ondemand/event/{assetbundle}/screen/bg.png",
+                "ondemand/event/{assetbundle}/screen/bg.webp",
+                "event/{assetbundle}/screen/bg.png",
+                "event/{assetbundle}/screen/bg.webp",
+            ],
+        );
+        m.insert(
+            "event:logo",
+            vec![
+                "ondemand/event/{assetbundle}/logo/logo.png",
+                "ondemand/event/{assetbundle}/logo/logo.webp",
+                "event/{assetbundle}/logo/logo.png",
+                "event/{assetbundle}/logo/logo.webp",
+            ],
+        );
+        m.insert(
+            "event:banner",
+            vec![
+                "ondemand/event_story/{assetbundle}/screen_image/banner_event_story.png",
+                "ondemand/event_story/{assetbundle}/screen_image/banner_event_story.webp",
+                "event_story/{assetbundle}/screen_image/banner_event_story.png",
+                "event_story/{assetbundle}/screen_image/banner_event_story.webp",
+                "ondemand/event/{assetbundle}/logo/logo.png",
+                "ondemand/event/{assetbundle}/logo/logo.webp",
+                "event/{assetbundle}/logo/logo.png",
+                "event/{assetbundle}/logo/logo.webp",
+                "ondemand/event/{assetbundle}/screen/bg.png",
+                "ondemand/event/{assetbundle}/screen/bg.webp",
+                "event/{assetbundle}/screen/bg.png",
+                "event/{assetbundle}/screen/bg.webp",
+                "ondemand/home/banner/{assetbundle}/{assetbundle}.png",
+                "ondemand/home/banner/{assetbundle}/{assetbundle}.webp",
+                "home/banner/{assetbundle}/{assetbundle}.png",
+                "home/banner/{assetbundle}/{assetbundle}.webp",
+            ],
+        );
+        m.insert(
+            "card:thumbnail",
+            vec![
+                "startapp/thumbnail/chara/{assetbundle}_{status}.png",
+                "startapp/thumbnail/chara/{assetbundle}_{status}.webp",
+                "thumbnail/chara/{assetbundle}_{status}.png",
+                "thumbnail/chara/{assetbundle}_{status}.webp",
+            ],
+        );
+        m.insert(
+            "card:image",
+            vec![
+                "startapp/character/member/{assetbundle}/{card_file}.png",
+                "startapp/character/member/{assetbundle}/{card_file}.webp",
+                "character/member/{assetbundle}/{card_file}.png",
+                "character/member/{assetbundle}/{card_file}.webp",
+            ],
+        );
+        m.insert(
+            "music:jacket",
+            vec![
+                "startapp/music/jacket/{assetbundle}/{assetbundle}.png",
+                "startapp/music/jacket/{assetbundle}/{assetbundle}.webp",
+                "music/jacket/{assetbundle}/{assetbundle}.png",
+                "music/jacket/{assetbundle}/{assetbundle}.webp",
+            ],
+        );
+        m
+    });
 
 pub static SEKAI_ASSETS_LIST: Lazy<Vec<SekaiAssetSource>> = Lazy::new(|| {
     let raw = env::var("SEKAI_ASSET").unwrap_or_default();
     parse_sekai_asset_sources(&raw)
 });
 
-pub static LABEL_URL_CACHE: Lazy<Arc<RwLock<HashMap<String, String>>>> = Lazy::new(|| {
-    Arc::new(RwLock::new(HashMap::new()))
-});
+pub static LABEL_URL_CACHE: Lazy<Arc<RwLock<HashMap<String, String>>>> =
+    Lazy::new(|| Arc::new(RwLock::new(HashMap::new())));
 
 fn parse_sekai_asset_sources(raw: &str) -> Vec<SekaiAssetSource> {
     let raw = raw.trim();
@@ -154,7 +171,11 @@ fn asset_base_candidates(source: SekaiAssetSource, server: &str) -> Vec<String> 
 }
 
 fn join_asset_url(base: &str, path: &str) -> String {
-    format!("{}/{}", base.trim_end_matches('/'), path.trim_start_matches('/'))
+    format!(
+        "{}/{}",
+        base.trim_end_matches('/'),
+        path.trim_start_matches('/')
+    )
 }
 
 fn build_asset_candidates(server: &str, relative_paths: &[String]) -> Vec<String> {
@@ -182,7 +203,10 @@ fn label_cache_key(server: &str, label: &str) -> String {
 
 async fn cached_asset_url(server: &str, label: &str) -> String {
     let cache = LABEL_URL_CACHE.read().await;
-    cache.get(&label_cache_key(server, label)).cloned().unwrap_or_default()
+    cache
+        .get(&label_cache_key(server, label))
+        .cloned()
+        .unwrap_or_default()
 }
 
 async fn update_cached_asset_url(server: &str, label: &str, url: &str) {
@@ -213,7 +237,11 @@ fn prioritize_asset_candidates(candidates: Vec<String>, preferred: &str) -> Vec<
     ordered
 }
 
-pub async fn download_asset_with_fallback(server: &str, label: &str, relative_paths: &[String]) -> String {
+pub async fn download_asset_with_fallback(
+    server: &str,
+    label: &str,
+    relative_paths: &[String],
+) -> String {
     let mut candidates = build_asset_candidates(server, relative_paths);
     if candidates.is_empty() {
         tracing::warn!(%label, "资源候选地址为空");

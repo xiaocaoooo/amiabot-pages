@@ -64,7 +64,10 @@ pub async fn duplicate_handler(Query(q): Query<DuplicateQuery>) -> impl IntoResp
             "gallery/duplicate.html",
             DuplicateResponse {
                 Duplicate: None,
-                Error: Some(format!("无效的 duplicate_id（需要 UUID）：{}", duplicate_id)),
+                Error: Some(format!(
+                    "无效的 duplicate_id（需要 UUID）：{}",
+                    duplicate_id
+                )),
             },
         );
     }
@@ -87,7 +90,9 @@ pub async fn duplicate_handler(Query(q): Query<DuplicateQuery>) -> impl IntoResp
             "gallery/duplicate.html",
             DuplicateResponse {
                 Duplicate: None,
-                Error: Some("对比图下载失败，请检查 current_image_url 与 gallery 文件服务".to_string()),
+                Error: Some(
+                    "对比图下载失败，请检查 current_image_url 与 gallery 文件服务".to_string(),
+                ),
             },
         );
     }
@@ -117,7 +122,8 @@ fn looks_like_uuid(s: &str) -> bool {
         return false;
     }
     let lens = [8, 4, 4, 4, 12];
-    parts.iter().zip(lens.iter()).all(|(p, &n)| {
-        p.len() == n && p.chars().all(|c| c.is_ascii_hexdigit())
-    })
+    parts
+        .iter()
+        .zip(lens.iter())
+        .all(|(p, &n)| p.len() == n && p.chars().all(|c| c.is_ascii_hexdigit()))
 }

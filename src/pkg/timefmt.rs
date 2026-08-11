@@ -6,7 +6,10 @@ pub fn format_unix_secs(secs: i64) -> String {
         return String::new();
     }
     match DateTime::from_timestamp(secs, 0) {
-        Some(dt) => dt.with_timezone(&Local).format("%Y-%m-%d %H:%M:%S").to_string(),
+        Some(dt) => dt
+            .with_timezone(&Local)
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string(),
         None => String::new(),
     }
 }

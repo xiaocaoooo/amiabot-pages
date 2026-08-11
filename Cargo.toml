@@ -29,6 +29,8 @@ utoipa = { version = "4.2", features = ["axum_extras"] }
 utoipa-swagger-ui = { version = "7.0", features = ["axum"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+md-5 = "0.11.0"
+html-escape = "0.2.15"
 
 [dev-dependencies]
 assert-json-diff = "2"

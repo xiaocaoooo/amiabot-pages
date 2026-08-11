@@ -1,21 +1,17 @@
-use axum::{
-    routing::get,
-    Router,
-    middleware,
-};
-use std::env;
-use std::net::SocketAddr;
-use std::time::Duration;
 use axum::extract::Request;
 use axum::middleware::Next;
 use axum::response::Response;
+use axum::{middleware, routing::get, Router};
+use std::env;
+use std::net::SocketAddr;
+use std::time::Duration;
 use std::time::Instant;
 use tracing_subscriber::EnvFilter;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-mod pkg;
 mod handlers;
+mod pkg;
 
 use crate::pkg::imgcache::DEFAULT_IMG_CACHE;
 use crate::pkg::paramid::ParamIDMiddleware;
@@ -27,14 +23,14 @@ use crate::handlers::gallery::tags::tags_handler;
 use crate::handlers::pixiv::{
     illust_info_handler, illust_media_handler, pixiv_image_proxy_handler, pixiv_ugoira_gif_handler,
 };
-use crate::handlers::pjsk::assets::{init_master_data, master_data_handler};
 use crate::handlers::pjsk::asset_binary::asset_binary_handler;
+use crate::handlers::pjsk::assets::{init_master_data, master_data_handler};
 use crate::handlers::pjsk::b30::b30_handler;
 use crate::handlers::pjsk::card::card_handler;
-use crate::handlers::pjsk::event::{event_handler, current_event_handler};
+use crate::handlers::pjsk::event::{current_event_handler, event_handler};
 use crate::handlers::pjsk::music::music_handler;
 use crate::handlers::pjsk::profile::{profile_handler, profile_raw_handler};
-use crate::handlers::query::{user_handler, group_handler};
+use crate::handlers::query::{group_handler, user_handler};
 use crate::handlers::status::zeabur_page_handler;
 
 #[derive(OpenApi)]
@@ -93,8 +89,7 @@ async fn main() {
     // 例如 RUST_LOG=amiabot_pages=debug,tower_http=info
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("info")),
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
         )
         .with_target(true)
         .with_level(true)
@@ -113,27 +108,24 @@ async fn main() {
     let mut api_routes = Router::new()
         // Swagger UI
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
-
         // Health check
-        .route("/health", get(|| async { axum::Json(serde_json::json!({"status": "ok"})) }))
-        
+        .route(
+            "/health",
+            get(|| async { axum::Json(serde_json::json!({"status": "ok"})) }),
+        )
         // Status routes
         .route("/status/zeabur", get(zeabur_page_handler))
-        
         // Bilibili routes
         .route("/bilibili/video", get(video_handler))
-        
         // Gallery routes
         .route("/gallery/duplicate", get(duplicate_handler))
         .route("/gallery/tags", get(tags_handler))
         .route("/gallery/images", get(images_handler))
-
         // Pixiv routes
         .route("/pixiv/illust/info", get(illust_info_handler))
         .route("/pixiv/illust/media", get(illust_media_handler))
         .route("/pixiv/image", get(pixiv_image_proxy_handler))
         .route("/pixiv/ugoira/gif", get(pixiv_ugoira_gif_handler))
-
         // PJSK routes
         .route("/pjsk/event", get(event_handler))
         .route("/pjsk/event/current", get(current_event_handler))
@@ -144,7 +136,6 @@ async fn main() {
         .route("/pjsk/b30", get(b30_handler))
         .route("/pjsk/masterdata/*path", get(master_data_handler))
         .route("/pjsk/assets/:label", get(asset_binary_handler))
-
         // Query routes
         .route("/query/user", get(user_handler))
         .route("/query/group", get(group_handler));
@@ -166,7 +157,9 @@ async fn main() {
     init_master_data().await;
 
     DEFAULT_IMG_CACHE.load_index().await;
-    DEFAULT_IMG_CACHE.clone().start_cleanup_ticker(Duration::from_secs(600));
+    DEFAULT_IMG_CACHE
+        .clone()
+        .start_cleanup_ticker(Duration::from_secs(600));
 
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let addr: SocketAddr = format!("0.0.0.0:{}", port).parse().unwrap();

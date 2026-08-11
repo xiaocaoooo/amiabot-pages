@@ -1,12 +1,9 @@
-use axum::{
-    extract::Query,
-    response::IntoResponse,
-};
-use serde::{Deserialize, Serialize};
-use crate::handlers::pjsk::{VALID_SERVERS, SERVER_NAMES};
 use crate::handlers::pjsk::asset_source::download_asset_by_label;
 use crate::handlers::pjsk::assets::read_cached_json;
+use crate::handlers::pjsk::{SERVER_NAMES, VALID_SERVERS};
 use crate::handlers::render_html;
+use axum::{extract::Query, response::IntoResponse};
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
 pub struct CardQuery {
@@ -131,56 +128,116 @@ pub fn unit_name(u: &str) -> &str {
 pub async fn card_handler(Query(q): Query<CardQuery>) -> impl IntoResponse {
     let server = q.server.unwrap_or_else(|| "jp".to_string());
     if !VALID_SERVERS.contains(&server) {
-        return render_html("pjsk/card.html", CardResponse {
-            Card: None,
-            Error: Some("无效的服务器参数，支持: jp, cn, en, tw, kr".to_string()),
-        }).into_response();
+        return render_html(
+            "pjsk/card.html",
+            CardResponse {
+                Card: None,
+                Error: Some("无效的服务器参数，支持: jp, cn, en, tw, kr".to_string()),
+            },
+        )
+        .into_response();
     }
 
     let card_id_str = q.id.unwrap_or_default().trim().to_string();
     if card_id_str.is_empty() {
-        return render_html("pjsk/card.html", CardResponse {
-            Card: None,
-            Error: Some("缺少卡片 ID 参数".to_string()),
-        }).into_response();
+        return render_html(
+            "pjsk/card.html",
+            CardResponse {
+                Card: None,
+                Error: Some("缺少卡片 ID 参数".to_string()),
+            },
+        )
+        .into_response();
     }
 
     let card_id: i32 = match card_id_str.parse() {
         Ok(id) if id > 0 => id,
         _ => {
-            return render_html("pjsk/card.html", CardResponse {
-                Card: None,
-                Error: Some("无效的卡片 ID".to_string()),
-            }).into_response();
+            return render_html(
+                "pjsk/card.html",
+                CardResponse {
+                    Card: None,
+                    Error: Some("无效的卡片 ID".to_string()),
+                },
+            )
+            .into_response();
         }
     };
 
     // Load card detail from local masterdata
     let cards_data = match read_cached_json(&server, "cards.json") {
         Ok(d) => d,
-        Err(e) => return render_html("pjsk/card.html", CardResponse { Card: None, Error: Some(e) }).into_response(),
+        Err(e) => {
+            return render_html(
+                "pjsk/card.html",
+                CardResponse {
+                    Card: None,
+                    Error: Some(e),
+                },
+            )
+            .into_response()
+        }
     };
     let cards: Vec<CardEntry> = match serde_json::from_slice(&cards_data) {
         Ok(c) => c,
-        Err(e) => return render_html("pjsk/card.html", CardResponse { Card: None, Error: Some(format!("解析 cards.json 失败: {}", e)) }).into_response(),
+        Err(e) => {
+            return render_html(
+                "pjsk/card.html",
+                CardResponse {
+                    Card: None,
+                    Error: Some(format!("解析 cards.json 失败: {}", e)),
+                },
+            )
+            .into_response()
+        }
     };
 
     let target_card = match cards.iter().find(|c| c.id == card_id) {
         Some(c) => c,
-        None => return render_html("pjsk/card.html", CardResponse { Card: None, Error: Some(format!("未找到卡片 #{}", card_id)) }).into_response(),
+        None => {
+            return render_html(
+                "pjsk/card.html",
+                CardResponse {
+                    Card: None,
+                    Error: Some(format!("未找到卡片 #{}", card_id)),
+                },
+            )
+            .into_response()
+        }
     };
 
     // Fetch character details
     let chars_data = match read_cached_json(&server, "gameCharacters.json") {
         Ok(d) => d,
-        Err(e) => return render_html("pjsk/card.html", CardResponse { Card: None, Error: Some(e) }).into_response(),
+        Err(e) => {
+            return render_html(
+                "pjsk/card.html",
+                CardResponse {
+                    Card: None,
+                    Error: Some(e),
+                },
+            )
+            .into_response()
+        }
     };
     let characters: Vec<CharacterEntry> = match serde_json::from_slice(&chars_data) {
         Ok(c) => c,
-        Err(e) => return render_html("pjsk/card.html", CardResponse { Card: None, Error: Some(format!("解析 gameCharacters.json 失败: {}", e)) }).into_response(),
+        Err(e) => {
+            return render_html(
+                "pjsk/card.html",
+                CardResponse {
+                    Card: None,
+                    Error: Some(format!("解析 gameCharacters.json 失败: {}", e)),
+                },
+            )
+            .into_response()
+        }
     };
 
-    let (char_name, char_unit) = match characters.iter().find(|ch| ch.id == target_card.character_id) {
+    let (char_name, char_unit) = match characters
+        .iter()
+        .find(|ch| ch.id == target_card.character_id)
+    {
         Some(ch) => {
             let first = ch.first_name.as_deref().unwrap_or("");
             let given = ch.given_name.as_deref().unwrap_or("");
@@ -224,19 +281,25 @@ pub async fn card_handler(Query(q): Query<CardQuery>) -> impl IntoResponse {
         SkillName: target_card.card_skill_name.clone().unwrap_or_default(),
         FlavorText: target_card.flavor_text.clone().unwrap_or_default(),
         ReleaseAt: format_millis_time(target_card.release_at),
-        Server: SERVER_NAMES.get(&server).cloned().unwrap_or_else(|| server.to_uppercase()),
+        Server: SERVER_NAMES
+            .get(&server)
+            .cloned()
+            .unwrap_or_else(|| server.to_uppercase()),
         ServerKey: server.clone(),
         FooterExtra: "Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />".to_string(),
         Thumbnail: thumb,
         CardImage: card_image,
-        Frame: format!("/static/pjsk/card/cardFrame_S_{}.png", match rarity.as_str() {
-            "rarity_1" => "1",
-            "rarity_2" => "2",
-            "rarity_3" => "3",
-            "rarity_4" => "4",
-            "rarity_birthday" => "bd",
-            _ => "1",
-        }),
+        Frame: format!(
+            "/static/pjsk/card/cardFrame_S_{}.png",
+            match rarity.as_str() {
+                "rarity_1" => "1",
+                "rarity_2" => "2",
+                "rarity_3" => "3",
+                "rarity_4" => "4",
+                "rarity_birthday" => "bd",
+                _ => "1",
+            }
+        ),
         AttrIcon: format!("/static/pjsk/card/icon_attribute_{}.png", attribute),
         Stars: star_positions(rarity),
         StarIcon: star_icon.clone(),
@@ -251,10 +314,14 @@ pub async fn card_handler(Query(q): Query<CardQuery>) -> impl IntoResponse {
 
     if has_special_training(rarity) {
         detail.HasAfter = true;
-        let thumb_after_label = format!("card:thumbnail:{}:after_training", target_card.assetbundle_name);
+        let thumb_after_label = format!(
+            "card:thumbnail:{}:after_training",
+            target_card.assetbundle_name
+        );
         detail.ThumbnailAfter = download_asset_by_label(&server, &thumb_after_label).await;
 
-        let card_image_after_label = format!("card:image:{}:after_training", target_card.assetbundle_name);
+        let card_image_after_label =
+            format!("card:image:{}:after_training", target_card.assetbundle_name);
         detail.CardImageAfter = download_asset_by_label(&server, &card_image_after_label).await;
 
         detail.FrameAfter = detail.Frame.clone();
@@ -262,8 +329,12 @@ pub async fn card_handler(Query(q): Query<CardQuery>) -> impl IntoResponse {
         detail.StarIconAfter = star_icon;
     }
 
-    render_html("pjsk/card.html", CardResponse {
-        Card: Some(detail),
-        Error: None,
-    }).into_response()
+    render_html(
+        "pjsk/card.html",
+        CardResponse {
+            Card: Some(detail),
+            Error: None,
+        },
+    )
+    .into_response()
 }

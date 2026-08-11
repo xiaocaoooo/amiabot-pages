@@ -46,7 +46,12 @@ pub struct ImagesResponse {
 
 pub async fn images_handler(Query(q): Query<ImagesQuery>) -> impl IntoResponse {
     let mut keys = Vec::new();
-    if let Some(g) = q.gallery.as_ref().map(|s| s.trim()).filter(|s| !s.is_empty()) {
+    if let Some(g) = q
+        .gallery
+        .as_ref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+    {
         keys.push(g.to_string());
     }
     keys.extend(split_csv_names(&q.tags.unwrap_or_default()));

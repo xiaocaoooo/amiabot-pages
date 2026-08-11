@@ -3,35 +3,31 @@ use axum::{
     http::{header, StatusCode},
     response::IntoResponse,
 };
+use once_cell::sync::Lazy;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
-use regex::Regex;
-use once_cell::sync::Lazy;
 
-use crate::handlers::pjsk::{SERVER_NAMES, VALID_SERVERS};
 use crate::handlers::pjsk::asset_source::download_asset_by_label;
-use crate::handlers::pjsk::card::{star_positions, has_special_training, rarity_name, attr_name, unit_name};
 use crate::handlers::pjsk::assets::read_cached_json;
+use crate::handlers::pjsk::card::{
+    attr_name, has_special_training, rarity_name, star_positions, unit_name,
+};
+use crate::handlers::pjsk::{SERVER_NAMES, VALID_SERVERS};
 use crate::handlers::{format_upstream_http_error, render_html};
 
-static PJSK_PROFILE_WORD_PLACEHOLDER_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"<#.*?>").unwrap()
-});
+static PJSK_PROFILE_WORD_PLACEHOLDER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"<#.*?>").unwrap());
 
 static PJSK_PROFILE_CHARACTER_GRID_ORDER: &[i32] = &[
-    21, 22, 23, 24, 25, 26,
-    1, 2, 3, 4, 0, 0,
-    5, 6, 7, 8, 0, 0,
-    9, 10, 11, 12, 0, 0,
-    13, 14, 15, 16, 0, 0,
-    17, 18, 19, 20, 0, 0,
+    21, 22, 23, 24, 25, 26, 1, 2, 3, 4, 0, 0, 5, 6, 7, 8, 0, 0, 9, 10, 11, 12, 0, 0, 13, 14, 15,
+    16, 0, 0, 17, 18, 19, 20, 0, 0,
 ];
 
 static PJSK_PROFILE_RADAR_ORDER: &[i32] = &[
-    21, 22, 23, 24, 25, 26, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+    21, 22, 23, 24, 25, 26, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
 ];
 
 static PJSK_PROFILE_UNIT_COLORS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
@@ -47,13 +43,32 @@ static PJSK_PROFILE_UNIT_COLORS: Lazy<HashMap<&'static str, &'static str>> = Laz
 
 static PJSK_PROFILE_CHARACTER_COLORS: Lazy<HashMap<i32, &'static str>> = Lazy::new(|| {
     let mut m = HashMap::new();
-    m.insert(1, "#33aaee"); m.insert(2, "#ffdd44"); m.insert(3, "#ee6666"); m.insert(4, "#bbdd22");
-    m.insert(5, "#ffccaa"); m.insert(6, "#99ccff"); m.insert(7, "#ffaacc"); m.insert(8, "#99eedd");
-    m.insert(9, "#ff6699"); m.insert(10, "#00bbdd"); m.insert(11, "#ff7722"); m.insert(12, "#0077dd");
-    m.insert(13, "#ffbb00"); m.insert(14, "#ff66bb"); m.insert(15, "#33dd99"); m.insert(16, "#bb88ee");
-    m.insert(17, "#bb6688"); m.insert(18, "#8888cc"); m.insert(19, "#ccaa88"); m.insert(20, "#ddaacc");
-    m.insert(21, "#33ccbb"); m.insert(22, "#ffcc11"); m.insert(23, "#ffee11"); m.insert(24, "#ffbbcc");
-    m.insert(25, "#dd4444"); m.insert(26, "#3366cc");
+    m.insert(1, "#33aaee");
+    m.insert(2, "#ffdd44");
+    m.insert(3, "#ee6666");
+    m.insert(4, "#bbdd22");
+    m.insert(5, "#ffccaa");
+    m.insert(6, "#99ccff");
+    m.insert(7, "#ffaacc");
+    m.insert(8, "#99eedd");
+    m.insert(9, "#ff6699");
+    m.insert(10, "#00bbdd");
+    m.insert(11, "#ff7722");
+    m.insert(12, "#0077dd");
+    m.insert(13, "#ffbb00");
+    m.insert(14, "#ff66bb");
+    m.insert(15, "#33dd99");
+    m.insert(16, "#bb88ee");
+    m.insert(17, "#bb6688");
+    m.insert(18, "#8888cc");
+    m.insert(19, "#ccaa88");
+    m.insert(20, "#ddaacc");
+    m.insert(21, "#33ccbb");
+    m.insert(22, "#ffcc11");
+    m.insert(23, "#ffee11");
+    m.insert(24, "#ffbbcc");
+    m.insert(25, "#dd4444");
+    m.insert(26, "#3366cc");
     m
 });
 
@@ -580,14 +595,17 @@ pub async fn fetch_player_name(server: &str, user_id: &str) -> Option<String> {
 // Master data loader helper
 async fn load_honor_lookup(server: &str) -> Result<HonorLookup, String> {
     let honors_raw = read_cached_json(server, "honors.json")?;
-    let honors_list: Vec<HonorEntry> = serde_json::from_slice(&honors_raw)
-        .map_err(|e| format!("解析 honors.json 失败: {}", e))?;
+    let honors_list: Vec<HonorEntry> =
+        serde_json::from_slice(&honors_raw).map_err(|e| format!("解析 honors.json 失败: {}", e))?;
     let honors: HashMap<i32, HonorEntry> = honors_list.into_iter().map(|h| (h.id, h)).collect();
 
     let groups_raw = read_cached_json(server, "honorGroups.json")?;
     let groups_list: Vec<HonorGroup> = serde_json::from_slice(&groups_raw)
         .map_err(|e| format!("解析 honorGroups.json 失败: {}", e))?;
-    let groups: HashMap<i32, HonorGroup> = groups_list.into_iter().map(|g| (g.id, group_with_compat(g))).collect();
+    let groups: HashMap<i32, HonorGroup> = groups_list
+        .into_iter()
+        .map(|g| (g.id, group_with_compat(g)))
+        .collect();
 
     let bonds_raw = read_cached_json(server, "bondsHonors.json")?;
     let bonds_list: Vec<BondsHonor> = serde_json::from_slice(&bonds_raw)
@@ -602,12 +620,14 @@ async fn load_honor_lookup(server: &str) -> Result<HonorLookup, String> {
     let units_raw = read_cached_json(server, "gameCharacterUnits.json")?;
     let units_list: Vec<GameCharacterUnit> = serde_json::from_slice(&units_raw)
         .map_err(|e| format!("解析 gameCharacterUnits.json 失败: {}", e))?;
-    let character_units: HashMap<i32, GameCharacterUnit> = units_list.into_iter().map(|u| (u.id, u)).collect();
+    let character_units: HashMap<i32, GameCharacterUnit> =
+        units_list.into_iter().map(|u| (u.id, u)).collect();
 
     let chars_raw = read_cached_json(server, "gameCharacters.json")?;
     let chars_list: Vec<GameCharacter> = serde_json::from_slice(&chars_raw)
         .map_err(|e| format!("解析 gameCharacters.json 失败: {}", e))?;
-    let characters: HashMap<i32, GameCharacter> = chars_list.into_iter().map(|c| (c.id, c)).collect();
+    let characters: HashMap<i32, GameCharacter> =
+        chars_list.into_iter().map(|c| (c.id, c)).collect();
 
     Ok(HonorLookup {
         honors,
@@ -645,26 +665,50 @@ fn group_with_compat(g: HonorGroup) -> HonorGroup {
 }
 
 // Complex aggregate assembler
-async fn build_profile_page_data(server: &str, user_id: &str, profile: RemoteProfileResponse) -> Result<PjskProfilePageData, String> {
-    let user = profile.user.clone().unwrap_or(RemoteProfileUser { name: None, rank: None });
+async fn build_profile_page_data(
+    server: &str,
+    user_id: &str,
+    profile: RemoteProfileResponse,
+) -> Result<PjskProfilePageData, String> {
+    let user = profile.user.clone().unwrap_or(RemoteProfileUser {
+        name: None,
+        rank: None,
+    });
     let raw_name = user.name.as_deref().unwrap_or("未知玩家");
-    let name = if raw_name.trim().is_empty() { "玩家" } else { raw_name };
+    let name = if raw_name.trim().is_empty() {
+        "玩家"
+    } else {
+        raw_name
+    };
 
-    let server_name = SERVER_NAMES.get(server).cloned().unwrap_or_else(|| server.to_uppercase());
+    let server_name = SERVER_NAMES
+        .get(server)
+        .cloned()
+        .unwrap_or_else(|| server.to_uppercase());
 
-    let user_profile = profile.user_profile.clone().unwrap_or(RemoteUserProfile { word: None, twitter_id: None });
+    let user_profile = profile.user_profile.clone().unwrap_or(RemoteUserProfile {
+        word: None,
+        twitter_id: None,
+    });
     let word = match user_profile.word {
-        Some(w) => PJSK_PROFILE_WORD_PLACEHOLDER_RE.replace_all(&w, "").trim().to_string(),
+        Some(w) => PJSK_PROFILE_WORD_PLACEHOLDER_RE
+            .replace_all(&w, "")
+            .trim()
+            .to_string(),
         None => String::new(),
     };
-    let twitter_id = user_profile.twitter_id.unwrap_or_default().trim().to_string();
+    let twitter_id = user_profile
+        .twitter_id
+        .unwrap_or_default()
+        .trim()
+        .to_string();
 
     let updated_at = match profile.update_time {
         Some(ts) => format_ts(ts),
         None => match profile.upload_time {
             Some(ts) => format_ts(ts),
             None => String::new(),
-        }
+        },
     };
 
     let deck_cards = build_profile_deck(server, &profile.user_deck, &profile.user_cards).await;
@@ -673,7 +717,8 @@ async fn build_profile_page_data(server: &str, user_id: &str, profile: RemotePro
 
     let honors = build_profile_honors(server, &profile.user_profile_honors).await;
 
-    let (difficulty_columns, play_stats_rows) = build_play_stats(profile.user_music_difficulty_clear_count);
+    let (difficulty_columns, play_stats_rows) =
+        build_play_stats(profile.user_music_difficulty_clear_count);
     let has_play_stats = !difficulty_columns.is_empty();
 
     let character_ranks = build_character_ranks(server, &profile.user_characters).await;
@@ -681,7 +726,12 @@ async fn build_profile_page_data(server: &str, user_id: &str, profile: RemotePro
     let radar_chart = build_radar_chart(server, &profile.user_characters).await;
     let has_radar_chart = !radar_chart.is_empty();
 
-    let challenge_live = build_challenge_live(server, &profile.user_challenge_live_solo_result, &profile.user_challenge_live_solo_stages).await;
+    let challenge_live = build_challenge_live(
+        server,
+        &profile.user_challenge_live_solo_result,
+        &profile.user_challenge_live_solo_stages,
+    )
+    .await;
     let has_training_section = has_radar_chart || challenge_live.Available;
 
     Ok(PjskProfilePageData {
@@ -723,13 +773,24 @@ fn format_ts(ts: i64) -> String {
     }
 }
 
-async fn build_profile_deck(server: &str, deck_opt: &Option<RemoteProfileUserDeck>, cards_list: &[RemoteProfileUserCard]) -> Vec<PjskProfileCardView> {
+async fn build_profile_deck(
+    server: &str,
+    deck_opt: &Option<RemoteProfileUserDeck>,
+    cards_list: &[RemoteProfileUserCard],
+) -> Vec<PjskProfileCardView> {
     let deck = match deck_opt {
         Some(d) => d,
         None => return Vec::new(),
     };
-    let card_states: HashMap<i32, &RemoteProfileUserCard> = cards_list.iter().map(|c| (c.card_id, c)).collect();
-    let members = [deck.member1, deck.member2, deck.member3, deck.member4, deck.member5];
+    let card_states: HashMap<i32, &RemoteProfileUserCard> =
+        cards_list.iter().map(|c| (c.card_id, c)).collect();
+    let members = [
+        deck.member1,
+        deck.member2,
+        deck.member3,
+        deck.member4,
+        deck.member5,
+    ];
 
     let cards_raw = match read_cached_json(server, "cards.json") {
         Ok(d) => d,
@@ -758,11 +819,18 @@ async fn build_profile_deck(server: &str, deck_opt: &Option<RemoteProfileUserDec
             Some(c) => c,
             None => continue,
         };
-        let (char_name, char_unit) = match master_chars.iter().find(|ch| ch.id == card.character_id) {
+        let (char_name, char_unit) = match master_chars.iter().find(|ch| ch.id == card.character_id)
+        {
             Some(ch) => {
                 let first = ch.first_name.as_deref().unwrap_or("");
                 let given = ch.given_name.as_deref().unwrap_or("");
-                let name = if first.is_empty() { given.to_string() } else if given.is_empty() { first.to_string() } else { format!("{} {}", first, given) };
+                let name = if first.is_empty() {
+                    given.to_string()
+                } else if given.is_empty() {
+                    first.to_string()
+                } else {
+                    format!("{} {}", first, given)
+                };
                 let unit = ch.unit.as_deref().unwrap_or("");
                 (name, unit_name(unit).to_string())
             }
@@ -770,7 +838,12 @@ async fn build_profile_deck(server: &str, deck_opt: &Option<RemoteProfileUserDec
         };
 
         let (level, master_rank, default_image, special_status) = match card_states.get(&mid) {
-            Some(state) => (state.level, state.master_rank, state.default_image.as_str(), state.special_training_status.as_str()),
+            Some(state) => (
+                state.level,
+                state.master_rank,
+                state.default_image.as_str(),
+                state.special_training_status.as_str(),
+            ),
             None => (1, 0, "normal", "none"),
         };
 
@@ -804,14 +877,17 @@ async fn build_profile_deck(server: &str, deck_opt: &Option<RemoteProfileUserDec
             MasterRank: master_rank,
             ImageMode: mode_label.to_string(),
             Thumbnail: thumbnail,
-            Frame: format!("/static/pjsk/card/cardFrame_S_{}.png", match card.card_rarity_type.as_str() {
-                "rarity_1" => "1",
-                "rarity_2" => "2",
-                "rarity_3" => "3",
-                "rarity_4" => "4",
-                "rarity_birthday" => "bd",
-                _ => "1",
-            }),
+            Frame: format!(
+                "/static/pjsk/card/cardFrame_S_{}.png",
+                match card.card_rarity_type.as_str() {
+                    "rarity_1" => "1",
+                    "rarity_2" => "2",
+                    "rarity_3" => "3",
+                    "rarity_4" => "4",
+                    "rarity_birthday" => "bd",
+                    _ => "1",
+                }
+            ),
             AttrIcon: format!("/static/pjsk/card/icon_attribute_{}.png", card.attribute),
             Stars: star_positions(&card.card_rarity_type),
             StarIcon: star_icon,
@@ -820,7 +896,10 @@ async fn build_profile_deck(server: &str, deck_opt: &Option<RemoteProfileUserDec
     views
 }
 
-async fn build_profile_honors(server: &str, user_honors: &[RemoteProfileHonor]) -> Vec<PjskProfileHonorView> {
+async fn build_profile_honors(
+    server: &str,
+    user_honors: &[RemoteProfileHonor],
+) -> Vec<PjskProfileHonorView> {
     if user_honors.is_empty() {
         return Vec::new();
     }
@@ -871,18 +950,29 @@ async fn build_profile_honors(server: &str, user_honors: &[RemoteProfileHonor]) 
 
             for lvl in &bonds_honor.levels {
                 if lvl.level == h.honor_level {
-                    view.Description = lvl.description.clone().unwrap_or_default().trim().to_string();
+                    view.Description = lvl
+                        .description
+                        .clone()
+                        .unwrap_or_default()
+                        .trim()
+                        .to_string();
                 }
             }
 
             if view.Subtitle.is_empty() {
                 let mut names = Vec::new();
-                if let Some(unit1) = lookup.character_units.get(&bonds_honor.game_character_unit_id1) {
+                if let Some(unit1) = lookup
+                    .character_units
+                    .get(&bonds_honor.game_character_unit_id1)
+                {
                     if let Some(ch) = lookup.characters.get(&unit1.game_character_id) {
                         names.push(short_name(ch));
                     }
                 }
-                if let Some(unit2) = lookup.character_units.get(&bonds_honor.game_character_unit_id2) {
+                if let Some(unit2) = lookup
+                    .character_units
+                    .get(&bonds_honor.game_character_unit_id2)
+                {
                     if let Some(ch) = lookup.characters.get(&unit2.game_character_id) {
                         names.push(short_name(ch));
                     }
@@ -903,7 +993,12 @@ async fn build_profile_honors(server: &str, user_honors: &[RemoteProfileHonor]) 
 
             for lvl in &normal_honor.levels {
                 if lvl.level == h.honor_level {
-                    view.Description = lvl.description.clone().unwrap_or_default().trim().to_string();
+                    view.Description = lvl
+                        .description
+                        .clone()
+                        .unwrap_or_default()
+                        .trim()
+                        .to_string();
                 }
             }
         }
@@ -956,13 +1051,30 @@ fn short_name(ch: &GameCharacter) -> String {
     format!("角色 #{}", ch.id)
 }
 
-fn build_play_stats(counts: Vec<RemoteProfileDifficultyCount>) -> (Vec<PjskProfileDifficultyColumn>, Vec<PjskProfilePlayStatsRow>) {
-    let easy = counts.iter().find(|c| c.music_difficulty_type.to_lowercase() == "easy");
-    let normal = counts.iter().find(|c| c.music_difficulty_type.to_lowercase() == "normal");
-    let hard = counts.iter().find(|c| c.music_difficulty_type.to_lowercase() == "hard");
-    let expert = counts.iter().find(|c| c.music_difficulty_type.to_lowercase() == "expert");
-    let master = counts.iter().find(|c| c.music_difficulty_type.to_lowercase() == "master");
-    let append = counts.iter().find(|c| c.music_difficulty_type.to_lowercase() == "append");
+fn build_play_stats(
+    counts: Vec<RemoteProfileDifficultyCount>,
+) -> (
+    Vec<PjskProfileDifficultyColumn>,
+    Vec<PjskProfilePlayStatsRow>,
+) {
+    let easy = counts
+        .iter()
+        .find(|c| c.music_difficulty_type.to_lowercase() == "easy");
+    let normal = counts
+        .iter()
+        .find(|c| c.music_difficulty_type.to_lowercase() == "normal");
+    let hard = counts
+        .iter()
+        .find(|c| c.music_difficulty_type.to_lowercase() == "hard");
+    let expert = counts
+        .iter()
+        .find(|c| c.music_difficulty_type.to_lowercase() == "expert");
+    let master = counts
+        .iter()
+        .find(|c| c.music_difficulty_type.to_lowercase() == "master");
+    let append = counts
+        .iter()
+        .find(|c| c.music_difficulty_type.to_lowercase() == "append");
 
     let cols = vec![
         PjskProfileDifficultyColumn { Label: "EZ".to_string(), BackgroundStyle: "background:#5AC06E; color:#ffffff;".to_string(), CellStyle: "background:rgba(90,192,110,0.16); color:#21400d; border-color:rgba(90,192,110,0.35);".to_string() },
@@ -974,42 +1086,108 @@ fn build_play_stats(counts: Vec<RemoteProfileDifficultyCount>) -> (Vec<PjskProfi
     ];
 
     let clears = vec![
-        PjskProfilePlayStatsCell { Value: easy.map(|c| c.live_clear).unwrap_or(0), Style: cols[0].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: normal.map(|c| c.live_clear).unwrap_or(0), Style: cols[1].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: hard.map(|c| c.live_clear).unwrap_or(0), Style: cols[2].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: expert.map(|c| c.live_clear).unwrap_or(0), Style: cols[3].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: master.map(|c| c.live_clear).unwrap_or(0), Style: cols[4].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: append.map(|c| c.live_clear).unwrap_or(0), Style: cols[5].CellStyle.clone() },
+        PjskProfilePlayStatsCell {
+            Value: easy.map(|c| c.live_clear).unwrap_or(0),
+            Style: cols[0].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: normal.map(|c| c.live_clear).unwrap_or(0),
+            Style: cols[1].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: hard.map(|c| c.live_clear).unwrap_or(0),
+            Style: cols[2].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: expert.map(|c| c.live_clear).unwrap_or(0),
+            Style: cols[3].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: master.map(|c| c.live_clear).unwrap_or(0),
+            Style: cols[4].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: append.map(|c| c.live_clear).unwrap_or(0),
+            Style: cols[5].CellStyle.clone(),
+        },
     ];
 
     let fcs = vec![
-        PjskProfilePlayStatsCell { Value: easy.map(|c| c.full_combo).unwrap_or(0), Style: cols[0].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: normal.map(|c| c.full_combo).unwrap_or(0), Style: cols[1].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: hard.map(|c| c.full_combo).unwrap_or(0), Style: cols[2].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: expert.map(|c| c.full_combo).unwrap_or(0), Style: cols[3].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: master.map(|c| c.full_combo).unwrap_or(0), Style: cols[4].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: append.map(|c| c.full_combo).unwrap_or(0), Style: cols[5].CellStyle.clone() },
+        PjskProfilePlayStatsCell {
+            Value: easy.map(|c| c.full_combo).unwrap_or(0),
+            Style: cols[0].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: normal.map(|c| c.full_combo).unwrap_or(0),
+            Style: cols[1].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: hard.map(|c| c.full_combo).unwrap_or(0),
+            Style: cols[2].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: expert.map(|c| c.full_combo).unwrap_or(0),
+            Style: cols[3].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: master.map(|c| c.full_combo).unwrap_or(0),
+            Style: cols[4].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: append.map(|c| c.full_combo).unwrap_or(0),
+            Style: cols[5].CellStyle.clone(),
+        },
     ];
 
     let aps = vec![
-        PjskProfilePlayStatsCell { Value: easy.map(|c| c.all_perfect).unwrap_or(0), Style: cols[0].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: normal.map(|c| c.all_perfect).unwrap_or(0), Style: cols[1].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: hard.map(|c| c.all_perfect).unwrap_or(0), Style: cols[2].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: expert.map(|c| c.all_perfect).unwrap_or(0), Style: cols[3].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: master.map(|c| c.all_perfect).unwrap_or(0), Style: cols[4].CellStyle.clone() },
-        PjskProfilePlayStatsCell { Value: append.map(|c| c.all_perfect).unwrap_or(0), Style: cols[5].CellStyle.clone() },
+        PjskProfilePlayStatsCell {
+            Value: easy.map(|c| c.all_perfect).unwrap_or(0),
+            Style: cols[0].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: normal.map(|c| c.all_perfect).unwrap_or(0),
+            Style: cols[1].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: hard.map(|c| c.all_perfect).unwrap_or(0),
+            Style: cols[2].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: expert.map(|c| c.all_perfect).unwrap_or(0),
+            Style: cols[3].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: master.map(|c| c.all_perfect).unwrap_or(0),
+            Style: cols[4].CellStyle.clone(),
+        },
+        PjskProfilePlayStatsCell {
+            Value: append.map(|c| c.all_perfect).unwrap_or(0),
+            Style: cols[5].CellStyle.clone(),
+        },
     ];
 
     let rows = vec![
-        PjskProfilePlayStatsRow { Label: "CLEAR".to_string(), Values: clears },
-        PjskProfilePlayStatsRow { Label: "FC".to_string(), Values: fcs },
-        PjskProfilePlayStatsRow { Label: "AP".to_string(), Values: aps },
+        PjskProfilePlayStatsRow {
+            Label: "CLEAR".to_string(),
+            Values: clears,
+        },
+        PjskProfilePlayStatsRow {
+            Label: "FC".to_string(),
+            Values: fcs,
+        },
+        PjskProfilePlayStatsRow {
+            Label: "AP".to_string(),
+            Values: aps,
+        },
     ];
 
     (cols, rows)
 }
 
-async fn build_character_ranks(server: &str, user_chars: &[RemoteProfileUserCharacter]) -> Vec<PjskProfileCharacterRankView> {
+async fn build_character_ranks(
+    server: &str,
+    user_chars: &[RemoteProfileUserCharacter],
+) -> Vec<PjskProfileCharacterRankView> {
     let raw = match read_cached_json(server, "gameCharacters.json") {
         Ok(d) => d,
         Err(_) => return Vec::new(),
@@ -1018,24 +1196,39 @@ async fn build_character_ranks(server: &str, user_chars: &[RemoteProfileUserChar
         Ok(c) => c,
         Err(_) => return Vec::new(),
     };
-    let ranks: HashMap<i32, i32> = user_chars.iter().map(|c| (c.character_id, c.character_rank)).collect();
+    let ranks: HashMap<i32, i32> = user_chars
+        .iter()
+        .map(|c| (c.character_id, c.character_rank))
+        .collect();
 
     let mut list = Vec::new();
     for &cid in PJSK_PROFILE_CHARACTER_GRID_ORDER {
         if cid == 0 {
-            list.push(PjskProfileCharacterRankView { Name: String::new(), Rank: 0, Empty: true });
+            list.push(PjskProfileCharacterRankView {
+                Name: String::new(),
+                Rank: 0,
+                Empty: true,
+            });
             continue;
         }
         let name = match master_chars.iter().find(|ch| ch.id == cid) {
             Some(ch) => {
                 let first = ch.first_name.as_deref().unwrap_or("");
                 let given = ch.given_name.as_deref().unwrap_or("");
-                if given.trim().is_empty() { first.to_string() } else { given.to_string() }
+                if given.trim().is_empty() {
+                    first.to_string()
+                } else {
+                    given.to_string()
+                }
             }
             None => format!("#{}", cid),
         };
         let rank = ranks.get(&cid).cloned().unwrap_or(0);
-        list.push(PjskProfileCharacterRankView { Name: name, Rank: rank, Empty: false });
+        list.push(PjskProfileCharacterRankView {
+            Name: name,
+            Rank: rank,
+            Empty: false,
+        });
     }
     list
 }
@@ -1053,7 +1246,10 @@ async fn build_radar_chart(server: &str, user_chars: &[RemoteProfileUserCharacte
         Err(_) => return String::new(),
     };
 
-    let rank_map: HashMap<i32, i32> = user_chars.iter().map(|c| (c.character_id, c.character_rank)).collect();
+    let rank_map: HashMap<i32, i32> = user_chars
+        .iter()
+        .map(|c| (c.character_id, c.character_rank))
+        .collect();
     let mut max_val = 0;
     for &cid in PJSK_PROFILE_RADAR_ORDER {
         let r = rank_map.get(&cid).cloned().unwrap_or(0);
@@ -1083,45 +1279,71 @@ async fn build_radar_chart(server: &str, user_chars: &[RemoteProfileUserCharacte
     let mut label_coords = Vec::new();
 
     for (i, &cid) in ordered_ids.iter().enumerate() {
-        let angle = -std::f64::consts::FRAC_PI_2 + (2.0 * std::f64::consts::PI * i as f64) / total_nodes as f64;
+        let angle = -std::f64::consts::FRAC_PI_2
+            + (2.0 * std::f64::consts::PI * i as f64) / total_nodes as f64;
         let cos_v = angle.cos();
         let sin_v = angle.sin();
 
-        label_coords.push((center_x + cos_v * label_radius, center_y + sin_v * label_radius));
+        label_coords.push((
+            center_x + cos_v * label_radius,
+            center_y + sin_v * label_radius,
+        ));
 
         let r = rank_map.get(&cid).cloned().unwrap_or(0);
         let ratio = (r as f64 / max_rank as f64).clamp(0.0, 1.0);
         let pt_radius = outer_radius * ratio;
 
         coords.push((center_x + cos_v * pt_radius, center_y + sin_v * pt_radius));
-        value_coords.push((center_x + cos_v * (pt_radius + val_gap), center_y + sin_v * (pt_radius + val_gap)));
+        value_coords.push((
+            center_x + cos_v * (pt_radius + val_gap),
+            center_y + sin_v * (pt_radius + val_gap),
+        ));
     }
 
     use std::fmt::Write;
     let mut s = String::new();
-    let _ = write!(&mut s, r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {:.0} {:.0}" style="display:block;width:100%;height:auto;">"##, width, height);
+    let _ = write!(
+        &mut s,
+        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {:.0} {:.0}" style="display:block;width:100%;height:auto;">"##,
+        width, height
+    );
     s.push_str(r##"<rect x="0" y="0" width="100%" height="100%" rx="24" fill="#ffffff" opacity="0.55"></rect>"##);
 
     // Draw grid polygons
     for r in (1..=rings).rev() {
         let ratio = r as f64 / rings as f64;
-        let fill = if r % 2 == 0 { "rgba(200,224,227,0.20)" } else { "rgba(200,224,227,0.10)" };
+        let fill = if r % 2 == 0 {
+            "rgba(200,224,227,0.20)"
+        } else {
+            "rgba(200,224,227,0.10)"
+        };
         let mut pts = Vec::new();
         for i in 0..total_nodes {
-            let angle = -std::f64::consts::FRAC_PI_2 + (2.0 * std::f64::consts::PI * i as f64) / total_nodes as f64;
+            let angle = -std::f64::consts::FRAC_PI_2
+                + (2.0 * std::f64::consts::PI * i as f64) / total_nodes as f64;
             let cx = center_x + angle.cos() * (outer_radius * ratio);
             let cy = center_y + angle.sin() * (outer_radius * ratio);
             pts.push(format!("{:.2},{:.2}", cx, cy));
         }
-        let _ = write!(&mut s, r##"<polygon points="{}" fill="{}" stroke="rgba(110,110,110,0.16)" stroke-width="1"/>"##, pts.join(" "), fill);
+        let _ = write!(
+            &mut s,
+            r##"<polygon points="{}" fill="{}" stroke="rgba(110,110,110,0.16)" stroke-width="1"/>"##,
+            pts.join(" "),
+            fill
+        );
     }
 
     // Draw straight spokes
     for i in 0..total_nodes {
-        let angle = -std::f64::consts::FRAC_PI_2 + (2.0 * std::f64::consts::PI * i as f64) / total_nodes as f64;
+        let angle = -std::f64::consts::FRAC_PI_2
+            + (2.0 * std::f64::consts::PI * i as f64) / total_nodes as f64;
         let ax = center_x + angle.cos() * outer_radius;
         let ay = center_y + angle.sin() * outer_radius;
-        let _ = write!(&mut s, r##"<line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="rgba(110,110,110,0.22)" stroke-width="1"/>"##, center_x, center_y, ax, ay);
+        let _ = write!(
+            &mut s,
+            r##"<line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="rgba(110,110,110,0.22)" stroke-width="1"/>"##,
+            center_x, center_y, ax, ay
+        );
     }
 
     // Label ring values
@@ -1129,7 +1351,13 @@ async fn build_radar_chart(server: &str, user_chars: &[RemoteProfileUserCharacte
         let ratio = r as f64 / rings as f64;
         let value = (max_rank as f64 * ratio).round() as i32;
         let y = center_y - outer_radius * ratio;
-        let _ = write!(&mut s, r##"<text x="{:.2}" y="{:.2}" fill="rgba(85,85,85,0.68)" font-size="12" text-anchor="middle" dominant-baseline="middle">{}</text>"##, center_x, y - 10.0, value);
+        let _ = write!(
+            &mut s,
+            r##"<text x="{:.2}" y="{:.2}" fill="rgba(85,85,85,0.68)" font-size="12" text-anchor="middle" dominant-baseline="middle">{}</text>"##,
+            center_x,
+            y - 10.0,
+            value
+        );
     }
 
     // Draw filled rank area
@@ -1137,7 +1365,11 @@ async fn build_radar_chart(server: &str, user_chars: &[RemoteProfileUserCharacte
     for (x, y) in &coords {
         fill_pts.push(format!("{:.2},{:.2}", x, y));
     }
-    let _ = write!(&mut s, r##"<polygon points="{}" fill="rgba(131,76,117,0.14)" stroke="#834c75" stroke-width="3"/>"##, fill_pts.join(" "));
+    let _ = write!(
+        &mut s,
+        r##"<polygon points="{}" fill="rgba(131,76,117,0.14)" stroke="#834c75" stroke-width="3"/>"##,
+        fill_pts.join(" ")
+    );
 
     // Node dots & rank values & labels
     for (i, &cid) in ordered_ids.iter().enumerate() {
@@ -1145,7 +1377,11 @@ async fn build_radar_chart(server: &str, user_chars: &[RemoteProfileUserCharacte
             Some(ch) => {
                 let first = ch.first_name.as_deref().unwrap_or("");
                 let given = ch.given_name.as_deref().unwrap_or("");
-                if given.trim().is_empty() { first.to_string() } else { given.to_string() }
+                if given.trim().is_empty() {
+                    first.to_string()
+                } else {
+                    given.to_string()
+                }
             }
             None => format!("#{}", cid),
         };
@@ -1155,13 +1391,31 @@ async fn build_radar_chart(server: &str, user_chars: &[RemoteProfileUserCharacte
         let (px, py) = coords[i];
         let (vx, vy) = value_coords[i];
 
-        let anchor = if lx < center_x - 18.0 { "end" } else if lx > center_x + 18.0 { "start" } else { "middle" };
-        let _ = write!(&mut s, r##"<text x="{:.2}" y="{:.2}" fill="{}" font-size="14" font-weight="700" text-anchor="{}" dominant-baseline="middle">{}</text>"##, lx, ly, color, anchor, name);
-        let _ = write!(&mut s, r##"<circle cx="{:.2}" cy="{:.2}" r="5.5" fill="{}" stroke="#ffffff" stroke-width="2"/>"##, px, py, color);
+        let anchor = if lx < center_x - 18.0 {
+            "end"
+        } else if lx > center_x + 18.0 {
+            "start"
+        } else {
+            "middle"
+        };
+        let _ = write!(
+            &mut s,
+            r##"<text x="{:.2}" y="{:.2}" fill="{}" font-size="14" font-weight="700" text-anchor="{}" dominant-baseline="middle">{}</text>"##,
+            lx, ly, color, anchor, name
+        );
+        let _ = write!(
+            &mut s,
+            r##"<circle cx="{:.2}" cy="{:.2}" r="5.5" fill="{}" stroke="#ffffff" stroke-width="2"/>"##,
+            px, py, color
+        );
 
         let rank = rank_map.get(&cid).cloned().unwrap_or(0);
         if rank > 0 {
-            let _ = write!(&mut s, r##"<text x="{:.2}" y="{:.2}" fill="{}" font-size="12" font-weight="700" text-anchor="middle" dominant-baseline="middle">{}</text>"##, vx, vy, color, rank);
+            let _ = write!(
+                &mut s,
+                r##"<text x="{:.2}" y="{:.2}" fill="{}" font-size="12" font-weight="700" text-anchor="middle" dominant-baseline="middle">{}</text>"##,
+                vx, vy, color, rank
+            );
         }
     }
 
@@ -1174,26 +1428,50 @@ fn resolve_character_color(cid: i32) -> &'static str {
         return col;
     }
     if cid >= 21 {
-        PJSK_PROFILE_UNIT_COLORS.get("piapro").copied().unwrap_or("#33CCBB")
+        PJSK_PROFILE_UNIT_COLORS
+            .get("piapro")
+            .copied()
+            .unwrap_or("#33CCBB")
     } else if cid >= 17 {
-        PJSK_PROFILE_UNIT_COLORS.get("school_refusal").copied().unwrap_or("#884499")
+        PJSK_PROFILE_UNIT_COLORS
+            .get("school_refusal")
+            .copied()
+            .unwrap_or("#884499")
     } else if cid >= 13 {
-        PJSK_PROFILE_UNIT_COLORS.get("theme_park").copied().unwrap_or("#FF9900")
+        PJSK_PROFILE_UNIT_COLORS
+            .get("theme_park")
+            .copied()
+            .unwrap_or("#FF9900")
     } else if cid >= 9 {
-        PJSK_PROFILE_UNIT_COLORS.get("street").copied().unwrap_or("#EE1166")
+        PJSK_PROFILE_UNIT_COLORS
+            .get("street")
+            .copied()
+            .unwrap_or("#EE1166")
     } else if cid >= 5 {
-        PJSK_PROFILE_UNIT_COLORS.get("idol").copied().unwrap_or("#88DD44")
+        PJSK_PROFILE_UNIT_COLORS
+            .get("idol")
+            .copied()
+            .unwrap_or("#88DD44")
     } else {
-        PJSK_PROFILE_UNIT_COLORS.get("light_sound").copied().unwrap_or("#4455DD")
+        PJSK_PROFILE_UNIT_COLORS
+            .get("light_sound")
+            .copied()
+            .unwrap_or("#4455DD")
     }
 }
 
-async fn build_challenge_live(server: &str, raw_opt: &Option<Value>, stages: &[RemoteProfileChallengeSoloStage]) -> PjskProfileChallengeLiveView {
+async fn build_challenge_live(
+    server: &str,
+    raw_opt: &Option<Value>,
+    stages: &[RemoteProfileChallengeSoloStage],
+) -> PjskProfileChallengeLiveView {
     let result = match raw_opt {
         Some(Value::Array(arr)) if !arr.is_empty() => {
             let mut best: Option<RemoteProfileChallengeSoloResult> = None;
             for val in arr {
-                if let Ok(item) = serde_json::from_value::<RemoteProfileChallengeSoloResult>(val.clone()) {
+                if let Ok(item) =
+                    serde_json::from_value::<RemoteProfileChallengeSoloResult>(val.clone())
+                {
                     if item.character_id > 0 {
                         match &best {
                             Some(b) if item.high_score > b.high_score => best = Some(item),
@@ -1206,14 +1484,22 @@ async fn build_challenge_live(server: &str, raw_opt: &Option<Value>, stages: &[R
             best
         }
         Some(Value::Object(obj)) => {
-            serde_json::from_value::<RemoteProfileChallengeSoloResult>(Value::Object(obj.clone())).ok()
+            serde_json::from_value::<RemoteProfileChallengeSoloResult>(Value::Object(obj.clone()))
+                .ok()
         }
         _ => None,
     };
 
     let best_result = match result {
         Some(r) if r.character_id > 0 => r,
-        _ => return PjskProfileChallengeLiveView { Available: false, CharacterName: String::new(), StageRank: 0, HighScore: 0 },
+        _ => {
+            return PjskProfileChallengeLiveView {
+                Available: false,
+                CharacterName: String::new(),
+                StageRank: 0,
+                HighScore: 0,
+            }
+        }
     };
 
     let mut stage_rank = 0;
@@ -1225,18 +1511,41 @@ async fn build_challenge_live(server: &str, raw_opt: &Option<Value>, stages: &[R
 
     let raw = match read_cached_json(server, "gameCharacters.json") {
         Ok(d) => d,
-        Err(_) => return PjskProfileChallengeLiveView { Available: true, CharacterName: format!("#{}", best_result.character_id), StageRank: stage_rank, HighScore: best_result.high_score },
+        Err(_) => {
+            return PjskProfileChallengeLiveView {
+                Available: true,
+                CharacterName: format!("#{}", best_result.character_id),
+                StageRank: stage_rank,
+                HighScore: best_result.high_score,
+            }
+        }
     };
     let master_chars: Vec<CharacterEntryLocal> = match serde_json::from_slice(&raw) {
         Ok(c) => c,
-        Err(_) => return PjskProfileChallengeLiveView { Available: true, CharacterName: format!("#{}", best_result.character_id), StageRank: stage_rank, HighScore: best_result.high_score },
+        Err(_) => {
+            return PjskProfileChallengeLiveView {
+                Available: true,
+                CharacterName: format!("#{}", best_result.character_id),
+                StageRank: stage_rank,
+                HighScore: best_result.high_score,
+            }
+        }
     };
 
-    let char_name = match master_chars.iter().find(|ch| ch.id == best_result.character_id) {
+    let char_name = match master_chars
+        .iter()
+        .find(|ch| ch.id == best_result.character_id)
+    {
         Some(ch) => {
             let first = ch.first_name.as_deref().unwrap_or("");
             let given = ch.given_name.as_deref().unwrap_or("");
-            if first.is_empty() { given.to_string() } else if given.is_empty() { first.to_string() } else { format!("{} {}", first, given) }
+            if first.is_empty() {
+                given.to_string()
+            } else if given.is_empty() {
+                first.to_string()
+            } else {
+                format!("{} {}", first, given)
+            }
         }
         None => format!("#{}", best_result.character_id),
     };

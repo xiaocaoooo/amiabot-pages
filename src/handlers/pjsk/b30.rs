@@ -1,24 +1,24 @@
-use axum::{
-    extract::Query,
-    response::IntoResponse,
-};
+use axum::{extract::Query, response::IntoResponse};
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
-use once_cell::sync::Lazy;
 
-use crate::handlers::pjsk::{VALID_SERVERS, SERVER_NAMES};
 use crate::handlers::pjsk::asset_source::download_asset_by_label;
 use crate::handlers::pjsk::assets::read_cached_json;
+use crate::handlers::pjsk::{SERVER_NAMES, VALID_SERVERS};
+use crate::handlers::{format_upstream_http_error, render_html};
 use crate::pkg::imgcache::DEFAULT_IMG_CACHE;
-use crate::handlers::{render_html, format_upstream_http_error};
 
-const B30_CHART_URL: &str = "https://raw.githubusercontent.com/moe-sekai/MoeSekai-Hub/main/data/pjskb30/merged_chart.csv";
-const PJSK_B30_AP_ICON_URL: &str = "https://raw.githubusercontent.com/watagashi-uni/Unibot/refs/heads/main/pics/AllPerfect.png";
-const PJSK_B30_FC_ICON_URL: &str = "https://raw.githubusercontent.com/watagashi-uni/Unibot/refs/heads/main/pics/FullCombo.png";
+const B30_CHART_URL: &str =
+    "https://raw.githubusercontent.com/moe-sekai/MoeSekai-Hub/main/data/pjskb30/merged_chart.csv";
+const PJSK_B30_AP_ICON_URL: &str =
+    "https://raw.githubusercontent.com/watagashi-uni/Unibot/refs/heads/main/pics/AllPerfect.png";
+const PJSK_B30_FC_ICON_URL: &str =
+    "https://raw.githubusercontent.com/watagashi-uni/Unibot/refs/heads/main/pics/FullCombo.png";
 
 #[derive(Deserialize, Debug)]
 pub struct B30Query {
@@ -76,9 +76,8 @@ struct ChartCache {
     expires: std::time::SystemTime,
 }
 
-static B30_CHART_CACHE: Lazy<Arc<RwLock<Option<ChartCache>>>> = Lazy::new(|| {
-    Arc::new(RwLock::new(None))
-});
+static B30_CHART_CACHE: Lazy<Arc<RwLock<Option<ChartCache>>>> =
+    Lazy::new(|| Arc::new(RwLock::new(None)));
 
 #[derive(Deserialize, Debug)]
 #[allow(non_snake_case)]
@@ -162,7 +161,8 @@ async fn get_b30_chart_csv() -> Result<String, String> {
         .build()
         .unwrap_or_default();
 
-    let resp = crate::pkg::http_client::send(client.get(B30_CHART_URL)).await
+    let resp = crate::pkg::http_client::send(client.get(B30_CHART_URL))
+        .await
         .map_err(|e| format!("获取难度表失败: {}", e))?;
 
     if !resp.status().is_success() {
@@ -171,8 +171,11 @@ async fn get_b30_chart_csv() -> Result<String, String> {
         return Err(format_upstream_http_error("B30 难度表", status, &body));
     }
 
-    let data = resp.text().await.map_err(|e| format!("读取难度表失败: {}", e))?;
-    
+    let data = resp
+        .text()
+        .await
+        .map_err(|e| format!("读取难度表失败: {}", e))?;
+
     let mut cache = B30_CHART_CACHE.write().await;
     *cache = Some(ChartCache {
         data: data.clone(),
@@ -247,7 +250,11 @@ fn calc_rating_for_result(rt: i32, constant: f64, _level: f64) -> f64 {
     }
 }
 
-async fn fetch_suite_music_results(base_url: &str, server: &str, user_id: &str) -> Result<(Vec<SuiteUserMusicResult>, String, String), String> {
+async fn fetch_suite_music_results(
+    base_url: &str,
+    server: &str,
+    user_id: &str,
+) -> Result<(Vec<SuiteUserMusicResult>, String, String), String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(30))
         .build()
@@ -331,10 +338,13 @@ fn build_music_index(server: &str) -> HashMap<i32, MusicEntry> {
 
 fn render_b30_err(msg: &str) -> impl IntoResponse {
     tracing::warn!(error = %msg, "b30 页面错误");
-    render_html("pjsk/b30.html", B30Response {
-        B30: None,
-        Error: Some(msg.to_string()),
-    })
+    render_html(
+        "pjsk/b30.html",
+        B30Response {
+            B30: None,
+            Error: Some(msg.to_string()),
+        },
+    )
 }
 
 struct BestEntry {
@@ -361,10 +371,11 @@ pub async fn b30_handler(Query(q): Query<B30Query>) -> impl IntoResponse {
         return render_b30_err("无效的玩家 ID").into_response();
     }
 
-    let suite_base_url = match env::var("PJSK_SUITE_BASEURL").or_else(|_| env::var("PJSK_PROFILE_BASEURL")) {
-        Ok(url) if !url.trim().is_empty() => url,
-        _ => return render_b30_err("未配置 PJSK_SUITE_BASEURL 环境变量").into_response(),
-    };
+    let suite_base_url =
+        match env::var("PJSK_SUITE_BASEURL").or_else(|_| env::var("PJSK_PROFILE_BASEURL")) {
+            Ok(url) if !url.trim().is_empty() => url,
+            _ => return render_b30_err("未配置 PJSK_SUITE_BASEURL 环境变量").into_response(),
+        };
 
     // 1. 获取难度表
     let chart_csv = match get_b30_chart_csv().await {
@@ -374,10 +385,11 @@ pub async fn b30_handler(Query(q): Query<B30Query>) -> impl IntoResponse {
     let chart_map = parse_b30_chart(&chart_csv);
 
     // 2. 获取音乐成绩
-    let (music_results, name, upload_time) = match fetch_suite_music_results(&suite_base_url, &server, &user_id).await {
-        Ok(res) => res,
-        Err(e) => return render_b30_err(&e).into_response(),
-    };
+    let (music_results, name, upload_time) =
+        match fetch_suite_music_results(&suite_base_url, &server, &user_id).await {
+            Ok(res) => res,
+            Err(e) => return render_b30_err(&e).into_response(),
+        };
 
     // 3. 并发合并最佳成绩
     let mut best_map: HashMap<i32, BestEntry> = HashMap::new();
@@ -410,15 +422,18 @@ pub async fn b30_handler(Query(q): Query<B30Query>) -> impl IntoResponse {
                 2 => "fc",
                 _ => "clear",
             };
-            best_map.insert(key, BestEntry {
-                song_id,
-                diff_num,
-                diff_label: diff_num_to_label(diff_num),
-                level: chart.level,
-                constant: chart.constant,
-                result_type: rt,
-                result_str,
-            });
+            best_map.insert(
+                key,
+                BestEntry {
+                    song_id,
+                    diff_num,
+                    diff_label: diff_num_to_label(diff_num),
+                    level: chart.level,
+                    constant: chart.constant,
+                    result_type: rt,
+                    result_str,
+                },
+            );
         }
     }
 
@@ -437,21 +452,36 @@ pub async fn b30_handler(Query(q): Query<B30Query>) -> impl IntoResponse {
         scored.push(ScoredEntry { entry, rating });
     }
 
-    scored.sort_by(|a, b| b.rating.partial_cmp(&a.rating).unwrap_or(std::cmp::Ordering::Equal));
+    scored.sort_by(|a, b| {
+        b.rating
+            .partial_cmp(&a.rating)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     if scored.len() > 30 {
         scored.truncate(30);
     }
 
     let sum_rating: f64 = scored.iter().map(|s| s.rating).sum();
-    let server_name = SERVER_NAMES.get(&server).cloned().unwrap_or_else(|| server.to_uppercase());
+    let server_name = SERVER_NAMES
+        .get(&server)
+        .cloned()
+        .unwrap_or_else(|| server.to_uppercase());
     let music_idx = build_music_index(&server);
 
     // 5. 转换为模板数据并异步拉取封面与结果图片
     let mut views = Vec::new();
     for (i, s) in scored.into_iter().enumerate() {
         let result_icon = match s.entry.result_str {
-            "ap" => DEFAULT_IMG_CACHE.download(PJSK_B30_AP_ICON_URL, None, None).await,
-            "fc" => DEFAULT_IMG_CACHE.download(PJSK_B30_FC_ICON_URL, None, None).await,
+            "ap" => {
+                DEFAULT_IMG_CACHE
+                    .download(PJSK_B30_AP_ICON_URL, None, None)
+                    .await
+            }
+            "fc" => {
+                DEFAULT_IMG_CACHE
+                    .download(PJSK_B30_FC_ICON_URL, None, None)
+                    .await
+            }
             _ => String::new(),
         };
 
@@ -479,7 +509,11 @@ pub async fn b30_handler(Query(q): Query<B30Query>) -> impl IntoResponse {
         });
     }
 
-    let rating_val = if views.is_empty() { 0.0 } else { sum_rating / 30.0 };
+    let rating_val = if views.is_empty() {
+        0.0
+    } else {
+        sum_rating / 30.0
+    };
     let page = B30PageData {
         Name: name,
         Server: server_name,
@@ -492,10 +526,14 @@ pub async fn b30_handler(Query(q): Query<B30Query>) -> impl IntoResponse {
         FooterExtra: "Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />".to_string(),
     };
 
-    render_html("pjsk/b30.html", B30Response {
-        B30: Some(page),
-        Error: None,
-    }).into_response()
+    render_html(
+        "pjsk/b30.html",
+        B30Response {
+            B30: Some(page),
+            Error: None,
+        },
+    )
+    .into_response()
 }
 
 fn truncate_str(s: &str, max_len: usize) -> String {
