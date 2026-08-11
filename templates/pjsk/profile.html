@@ -433,9 +433,9 @@
             {% endfor %}
 
             {% for row in p.PlayStatsRows %}
-            <div class="profile-play-row-label">{{ row.row.Label }}</div>
-            {% for cell in row.row.Values %}
-            <div class="profile-play-cell" style="{{ cell.cell.Style }}">{{ cell.cell.Value }}</div>
+            <div class="profile-play-row-label">{{ row.Label }}</div>
+            {% for cell in row.Values %}
+            <div class="profile-play-cell" style="{{ cell.Style }}">{{ cell.Value }}</div>
             {% endfor %}
             {% endfor %}
         </div>
