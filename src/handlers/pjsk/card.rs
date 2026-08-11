@@ -18,10 +18,14 @@ pub struct CardQuery {
 #[allow(non_snake_case)]
 pub struct CardDetail {
     pub ID: i32,
-    pub Title: String,
+    pub Prefix: String, // 对应 Go 兼容：Go 模板使用了 c.Prefix
+    pub Title: String,  // Title 用于备用
     pub CharacterName: String,
+    pub CharacterUnit: String,
     pub Rarity: String,
     pub Attr: String,
+    pub SkillName: String,
+    pub FlavorText: String,
     pub ReleaseAt: String,
     pub Server: String,
     pub ServerKey: String,
@@ -30,6 +34,15 @@ pub struct CardDetail {
     pub CardImage: String,
     pub Frame: String,
     pub AttrIcon: String,
+    pub Stars: Vec<i32>,
+    pub StarIcon: String,
+
+    pub CardImageAfter: String,
+    pub HasAfter: bool,
+    pub ThumbnailAfter: String,
+    pub FrameAfter: String,
+    pub StarsAfter: Vec<i32>,
+    pub StarIconAfter: String,
 }
 
 #[derive(Serialize)]
@@ -48,6 +61,8 @@ struct CardEntry {
     attribute: String,
     prefix: String,
     assetbundle_name: String,
+    card_skill_name: Option<String>,
+    flavor_text: Option<String>,
     release_at: i64,
 }
 
@@ -57,10 +72,60 @@ struct CharacterEntry {
     id: i32,
     first_name: Option<String>,
     given_name: Option<String>,
+    unit: Option<String>,
 }
 
 fn format_millis_time(ms: i64) -> String {
     crate::pkg::timefmt::format_unix_millis(ms)
+}
+
+pub fn star_positions(rarity: &str) -> Vec<i32> {
+    match rarity {
+        "rarity_1" => vec![10],
+        "rarity_2" => vec![10, 36],
+        "rarity_3" => vec![10, 36, 62],
+        "rarity_4" => vec![10, 36, 62, 88],
+        "rarity_birthday" => vec![10],
+        _ => vec![],
+    }
+}
+
+pub fn has_special_training(rarity: &str) -> bool {
+    rarity == "rarity_3" || rarity == "rarity_4" || rarity == "rarity_birthday"
+}
+
+pub fn rarity_name(rarity: &str) -> &str {
+    match rarity {
+        "rarity_1" => "★",
+        "rarity_2" => "★★",
+        "rarity_3" => "★★★",
+        "rarity_4" => "★★★★",
+        "rarity_birthday" => "Birthday",
+        _ => rarity,
+    }
+}
+
+pub fn attr_name(attr: &str) -> &str {
+    match attr {
+        "cool" => "Cool",
+        "cute" => "Cute",
+        "happy" => "Happy",
+        "mysterious" => "Mysterious",
+        "pure" => "Pure",
+        _ => attr,
+    }
+}
+
+pub fn unit_name(u: &str) -> &str {
+    match u {
+        "idol" => "MORE MORE JUMP!",
+        "light_sound" => "Leo/need",
+        "school_refusal" => "25时、ナイトコード对。",
+        "street" => "Vivid BAD SQUAD",
+        "theme_park" => "ワンダーランズ×ショウタイム",
+        "none" => "混合",
+        _ => u,
+    }
 }
 
 pub async fn card_handler(Query(q): Query<CardQuery>) -> impl IntoResponse {
@@ -115,19 +180,21 @@ pub async fn card_handler(Query(q): Query<CardQuery>) -> impl IntoResponse {
         Err(e) => return render_html("pjsk/card.html", CardResponse { Card: None, Error: Some(format!("解析 gameCharacters.json 失败: {}", e)) }).into_response(),
     };
 
-    let char_name = match characters.iter().find(|ch| ch.id == target_card.character_id) {
+    let (char_name, char_unit) = match characters.iter().find(|ch| ch.id == target_card.character_id) {
         Some(ch) => {
             let first = ch.first_name.as_deref().unwrap_or("");
             let given = ch.given_name.as_deref().unwrap_or("");
-            if first.is_empty() {
+            let name = if first.is_empty() {
                 given.to_string()
             } else if given.is_empty() {
                 first.to_string()
             } else {
                 format!("{} {}", first, given)
-            }
+            };
+            let unit = ch.unit.as_deref().unwrap_or("");
+            (name, unit_name(unit).to_string())
         }
-        None => "未知".to_string(),
+        None => ("未知".to_string(), "".to_string()),
     };
 
     let rarity = &target_card.card_rarity_type;
@@ -140,25 +207,60 @@ pub async fn card_handler(Query(q): Query<CardQuery>) -> impl IntoResponse {
     let card_image_label = format!("card:image:{}:normal", target_card.assetbundle_name);
     let card_image = download_asset_by_label(&server, &card_image_label).await;
 
-    // Use placeholder values for frame or attribute icons (as configured in static files or remote)
-    let frame_url = format!("/static/pjsk/card/frame_{}.png", rarity);
-    let attr_url = format!("/static/pjsk/card/icon_attr_{}.png", attribute);
+    let star_icon = if rarity == "rarity_birthday" {
+        "/static/pjsk/card/rarity_birthday.png".to_string()
+    } else {
+        "/static/pjsk/card/rarity_star_normal.png".to_string()
+    };
 
-    let detail = CardDetail {
+    let mut detail = CardDetail {
         ID: target_card.id,
+        Prefix: target_card.prefix.clone(),
         Title: target_card.prefix.clone(),
         CharacterName: char_name,
-        Rarity: rarity.clone(),
-        Attr: attribute.clone(),
+        CharacterUnit: char_unit,
+        Rarity: rarity_name(rarity).to_string(),
+        Attr: attr_name(attribute).to_string(),
+        SkillName: target_card.card_skill_name.clone().unwrap_or_default(),
+        FlavorText: target_card.flavor_text.clone().unwrap_or_default(),
         ReleaseAt: format_millis_time(target_card.release_at),
         Server: SERVER_NAMES.get(&server).cloned().unwrap_or_else(|| server.to_uppercase()),
-        ServerKey: server,
+        ServerKey: server.clone(),
         FooterExtra: "Powered by Moesekai, Haruki, LunaBot, Uni, & Sekai World<br />".to_string(),
         Thumbnail: thumb,
         CardImage: card_image,
-        Frame: frame_url,
-        AttrIcon: attr_url,
+        Frame: format!("/static/pjsk/card/cardFrame_S_{}.png", match rarity.as_str() {
+            "rarity_1" => "1",
+            "rarity_2" => "2",
+            "rarity_3" => "3",
+            "rarity_4" => "4",
+            "rarity_birthday" => "bd",
+            _ => "1",
+        }),
+        AttrIcon: format!("/static/pjsk/card/icon_attribute_{}.png", attribute),
+        Stars: star_positions(rarity),
+        StarIcon: star_icon.clone(),
+
+        CardImageAfter: String::new(),
+        HasAfter: false,
+        ThumbnailAfter: String::new(),
+        FrameAfter: String::new(),
+        StarsAfter: vec![],
+        StarIconAfter: String::new(),
     };
+
+    if has_special_training(rarity) {
+        detail.HasAfter = true;
+        let thumb_after_label = format!("card:thumbnail:{}:after_training", target_card.assetbundle_name);
+        detail.ThumbnailAfter = download_asset_by_label(&server, &thumb_after_label).await;
+
+        let card_image_after_label = format!("card:image:{}:after_training", target_card.assetbundle_name);
+        detail.CardImageAfter = download_asset_by_label(&server, &card_image_after_label).await;
+
+        detail.FrameAfter = detail.Frame.clone();
+        detail.StarsAfter = detail.Stars.clone();
+        detail.StarIconAfter = star_icon;
+    }
 
     render_html("pjsk/card.html", CardResponse {
         Card: Some(detail),

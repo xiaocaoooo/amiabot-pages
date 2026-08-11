@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::handlers::pjsk::{VALID_SERVERS, SERVER_NAMES};
 use crate::handlers::pjsk::asset_source::download_asset_by_label;
 use crate::handlers::pjsk::assets::read_cached_json;
+use crate::handlers::pjsk::card::{star_positions};
 use crate::handlers::render_html;
 
 #[derive(Deserialize, Debug)]
@@ -21,6 +22,10 @@ pub struct CardView {
     pub ID: i32,
     pub Prefix: String,
     pub Thumbnail: String,
+    pub Frame: String,
+    pub AttrIcon: String,
+    pub Stars: Vec<i32>,
+    pub StarIcon: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -67,6 +72,8 @@ struct CardEntry {
     id: i32,
     prefix: String,
     assetbundleName: String,
+    cardRarityType: String,
+    attribute: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -167,10 +174,31 @@ pub async fn event_handler(Query(q): Query<EventQuery>) -> impl IntoResponse {
                         if let Some(c) = all_cards.iter().find(|c| c.id == cid) {
                             let label = format!("card:thumbnail:{}:normal", c.assetbundleName);
                             let thumb = download_asset_by_label(&server, &label).await;
+                            
+                            let rarity = &c.cardRarityType;
+                            let star_icon = if rarity == "rarity_birthday" {
+                                "/static/pjsk/card/rarity_birthday.png".to_string()
+                            } else {
+                                "/static/pjsk/card/rarity_star_normal.png".to_string()
+                            };
+
+                            let frame = format!("/static/pjsk/card/cardFrame_S_{}.png", match rarity.as_str() {
+                                "rarity_1" => "1",
+                                "rarity_2" => "2",
+                                "rarity_3" => "3",
+                                "rarity_4" => "4",
+                                "rarity_birthday" => "bd",
+                                _ => "1",
+                            });
+
                             cards.push(CardView {
                                 ID: c.id,
                                 Prefix: c.prefix.clone(),
                                 Thumbnail: thumb,
+                                Frame: frame,
+                                AttrIcon: format!("/static/pjsk/card/icon_attribute_{}.png", c.attribute),
+                                Stars: star_positions(rarity),
+                                StarIcon: star_icon,
                             });
                         }
                     }
