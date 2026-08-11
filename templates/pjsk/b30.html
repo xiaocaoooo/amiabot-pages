@@ -57,18 +57,18 @@
             <tbody>
             {% for s in b.Scores %}
                 <tr>
-                    <td class="order">{{ s.s.Order }}</td>
+                    <td class="order">{{ s.Order }}</td>
                     <td>
                         <div class="b30-song-cell">
-                            {% if s.s.Cover %}
-                            <img class="b30-cover" src="{{ s.s.Cover }}" />
+                            {% if s.Cover %}
+                            <img class="b30-cover" src="{{ s.Cover }}" />
                             {% endif %}
-                            <div><div class="song">{{ s.s.Name }}</div><div class="sid">{{ s.s.SongID }}</div></div>
+                            <div><div class="song">{{ s.Name }}</div><div class="sid">{{ s.SongID }}</div></div>
                         </div>
                     </td>
-                    <td><span class="b30-diff" style="{{ s.s.DiffStyle }}">{{ s.s.Diff }}</span></td>
-                    <td class="cst">{{ s.s.Constant }}</td>
-                    <td class="b30-result-icon">{% if s.s.ResultIcon %}<img src="{{ s.s.ResultIcon }}" />{% endif %}</td>
+                    <td><span class="b30-diff" style="{{ s.DiffStyle }}">{{ s.Diff }}</span></td>
+                    <td class="cst">{{ s.Constant }}</td>
+                    <td class="b30-result-icon">{% if s.ResultIcon %}<img src="{{ s.ResultIcon }}" />{% endif %}</td>
                 </tr>
             {% endfor %}
             {% if b.Count == 0 %}

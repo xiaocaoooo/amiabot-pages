@@ -114,7 +114,7 @@
 </div>
 {% endif %}
 
-{% if (len > i.Previews) %}
+{% if i.Previews|length > 0 %}
 <div class="container" style="background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant); margin-top: 8px;">
     <div class="label">多页预览（展示前 {{ i.DisplayedPreviews }} / {{ i.PageCount }} 页）</div>
     <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px;">
