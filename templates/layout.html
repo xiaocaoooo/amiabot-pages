@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -39,22 +40,109 @@
             --radius-md: 12px;
             --radius-lg: 24px;
         }
-        * { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; transition:none !important; animation:none !important; }
-        body { font-family:"Noto Sans CJK SC","Source Han Sans SC",system-ui,sans-serif; display:flex; justify-content:center; align-items:flex-start; }
-        #screenshot-wrapper { padding:4rem; display:flex; justify-content:center; }
-        #app { display:flex; flex-direction:column; min-width:500px; max-width:900px; background:transparent; border-radius:var(--radius-lg); overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.1); }
-        #logo-container { padding:var(--space-lg) var(--space-lg) 0; display:flex; justify-content:center; align-items:center; }
-        #logo-container svg, #logo-container img { max-height:80px; width:auto; }
-        #content { margin:var(--space-lg); padding:var(--space-md); background:transparent; color:var(--color-on-surface); border-radius:var(--radius-md); line-height:1.6; font-size:16px; }
-        #footer { padding:0 var(--space-lg) var(--space-lg); text-align:center; font-size:12px; color:var(--color-on-surface-variant); opacity:0.8; }
-        .container { padding:var(--space-sm); border-radius:var(--radius-sm); margin-bottom:var(--space-sm); }
-        .primary-container { background:var(--color-primary-container); color:var(--color-on-primary-container); }
-        .secondary-container { background:var(--color-secondary-container); color:var(--color-on-secondary-container); }
-        .error-container { background:var(--color-error-container); color:var(--color-on-error-container); }
-        .label { font-weight:bold; font-size:0.85em; text-transform:uppercase; letter-spacing:0.05em; opacity:0.8; margin-bottom:var(--space-xs); }
-        .value { font-size:1.1em; word-break:break-all; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            transition: none !important;
+            animation: none !important;
+        }
+
+        body {
+            font-family: "Noto Sans CJK SC", "Source Han Sans SC", system-ui, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        #screenshot-wrapper {
+            padding: 4rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            min-width: 500px;
+            max-width: 900px;
+            background: var(--color-primary-container);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .1);
+        }
+
+        #logo-container {
+            padding: var(--space-lg) var(--space-lg) 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #logo-container svg,
+        #logo-container img {
+            max-height: 80px;
+            width: auto;
+        }
+
+        #content {
+            margin: var(--space-lg);
+            padding: var(--space-md);
+            background: var(--color-surface);
+            color: var(--color-on-surface);
+            border-radius: var(--radius-md);
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        #footer {
+            padding: 0 var(--space-lg) var(--space-lg);
+            text-align: center;
+            font-size: 12px;
+            color: var(--color-on-surface-variant);
+            opacity: 0.8;
+        }
+
+        .container {
+            padding: var(--space-sm);
+            border-radius: var(--radius-sm);
+            margin-bottom: var(--space-sm);
+        }
+
+        .primary-container {
+            background: var(--color-primary-container);
+            color: var(--color-on-primary-container);
+        }
+
+        .secondary-container {
+            background: var(--color-secondary-container);
+            color: var(--color-on-secondary-container);
+        }
+
+        .error-container {
+            background: var(--color-error-container);
+            color: var(--color-on-error-container);
+        }
+
+        .label {
+            font-weight: bold;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.8;
+            margin-bottom: var(--space-xs);
+        }
+
+        .value {
+            font-size: 1.1em;
+            word-break: break-all;
+        }
     </style>
 </head>
+
 <body>
     <div id="screenshot-wrapper">
         <div id="app">
@@ -82,4 +170,5 @@
         })();
     </script>
 </body>
+
 </html>
